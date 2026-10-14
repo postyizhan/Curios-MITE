@@ -32,7 +32,7 @@ public final class CuriosApi {
 
     public static ISlotType registerSlotType(SlotTypeMessage message) {
         if (message == null) throw new IllegalArgumentException("Slot type message cannot be null");
-        return registerSlotType(message.getIdentifier(), message.getSize());
+        return CuriosSlotRegistry.register(message);
     }
 
     public static Optional<ISlotType> getSlotType(String identifier) {

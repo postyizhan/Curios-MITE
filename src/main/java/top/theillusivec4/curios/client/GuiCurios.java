@@ -32,6 +32,7 @@ public final class GuiCurios extends GuiScreen {
     private void rebuildVisibleSlots() {
         visibleSlots.clear();
         for (ISlotType type : CuriosApi.getSlotTypes().values()) {
+            if (!type.isVisible()) continue;
             for (int index = 0; index < type.getSize(); index++) {
                 visibleSlots.add(new SlotRef(type.getIdentifier(), index));
             }
