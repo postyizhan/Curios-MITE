@@ -6,7 +6,6 @@ import java.lang.ref.WeakReference;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import top.theillusivec4.curios.CuriosNetwork;
 import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.BaseAttributeMap;
@@ -14,6 +13,7 @@ import net.minecraft.EntityLivingBase;
 import net.minecraft.ItemStack;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.NBTTagList;
+import top.theillusivec4.curios.CuriosNetwork;
 import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.capability.ICurio;
@@ -21,7 +21,7 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
-/** Entity-owned Curios inventory with NBT persistence; GUI and network sync are subsequent slices. */
+/** Entity-owned Curios inventory with NBT persistence and server-authoritative changes. */
 public final class CuriosInventory implements ICuriosItemHandler {
     private static final Map<EntityLivingBase, CuriosInventory> INSTANCES = new java.util.WeakHashMap<EntityLivingBase, CuriosInventory>();
     private final Map<String, Slots> slots = new LinkedHashMap<String, Slots>();
@@ -60,26 +60,14 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (stack == null) return false;
         StackHandler stacks = slot(identifier).stacks;
         if (!stacks.isValidSlot(index) || stacks.getStackInSlot(index) != null) return false;
-        EntityLivingBase owner = entity.get();
-        if (owner == null) return false;
-        ICurio curio = getCurio(stack);
-        if (curio != null && !curio.canEquip(identifier, owner)) return false;
-        slot(identifier).stacks.setStackInSlot(index, stack);
-        if (curio != null) curio.onEquip(identifier, index, owner);
-        return true;
+        return replace(identifier, index, stack);
     }
     @Override public ItemStack unequip(String identifier, int index) {
         ensureSlotTypes();
         StackHandler stacks = slot(identifier).stacks;
         if (!stacks.isValidSlot(index)) return null;
         ItemStack old = stacks.getStackInSlot(index);
-        EntityLivingBase owner = entity.get();
-        if (owner == null) return null;
-        ICurio curio = getCurio(old);
-        if (curio != null && !curio.canUnequip(identifier, owner)) return null;
-        slot(identifier).stacks.setStackInSlot(index, null);
-        if (curio != null) curio.onUnequip(identifier, index, owner);
-        return old;
+        return replace(identifier, index, null) ? old : null;
     }
     @Override public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
         ensureSlotTypes();
@@ -166,11 +154,34 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (stack == null || stack.getItem() == null) return null;
         return stack.getItem() instanceof ICurioItem ? ((ICurioItem) stack.getItem()).getCurio(stack) : null;
     }
+
+    private boolean replace(String identifier, int index, ItemStack stack) {
+        StackHandler stacks = slot(identifier).stacks;
+        if (!stacks.isValidSlot(index)) return false;
+        ItemStack previousStack = stacks.getStackInSlot(index);
+        if (previousStack == stack) return true;
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote) return false;
+        ICurio previousCurio = getCurio(previousStack);
+        ICurio nextCurio = getCurio(stack);
+        if (stack != null && nextCurio == null) return false;
+        if (previousCurio != null && !previousCurio.canUnequip(identifier, owner)) return false;
+        if (nextCurio != null && !nextCurio.canEquip(identifier, owner)) return false;
+
+        Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        stacks.setRaw(index, stack);
+        applyAttributeChanges(previousModifiers);
+        if (previousCurio != null) previousCurio.onUnequip(identifier, index, owner);
+        if (nextCurio != null) nextCurio.onEquip(identifier, index, owner);
+        CuriosNetwork.sync(owner);
+        return true;
+    }
+
     private Slots slot(String id) { Slots s = slots.get(id); if (s == null) throw new IllegalArgumentException("Unknown Curios slot: " + id); return s; }
 
     private final class Slots implements ICurioStacksHandler {
         private final String id; private final StackHandler stacks, cosmetics;
-        private Slots(String id, int size) { this.id = id; this.stacks = new StackHandler(size, true); this.cosmetics = new StackHandler(size, false); }
+        private Slots(String id, int size) { this.id = id; this.stacks = new StackHandler(id, size, true); this.cosmetics = new StackHandler(id, size, false); }
         @Override public String getIdentifier() { return id; }
         @Override public IDynamicStackHandler getStacks() { return stacks; }
         @Override public IDynamicStackHandler getCosmeticStacks() { return cosmetics; }
@@ -178,17 +189,24 @@ public final class CuriosInventory implements ICuriosItemHandler {
     }
     private final class StackHandler implements IDynamicStackHandler {
         private ItemStack[] values;
+        private final String identifier;
         private final boolean functional;
-        private StackHandler(int size, boolean functional) { values = new ItemStack[size]; this.functional = functional; }
+        private StackHandler(String identifier, int size, boolean functional) {
+            values = new ItemStack[size];
+            this.identifier = identifier;
+            this.functional = functional;
+        }
         @Override public int getSlots() { return values.length; }
         @Override public ItemStack getStackInSlot(int slot) { return values[slot]; }
         @Override public void setStackInSlot(int slot, ItemStack stack) {
-            Multimap<Attribute, AttributeModifier> previous = functional ? CuriosInventory.this.getAttributeModifiers() : null;
-            setRaw(slot, stack);
-            if (functional) {
-                CuriosInventory.this.applyAttributeChanges(previous);
+            if (!isValidSlot(slot)) throw new IndexOutOfBoundsException("Curios slot index: " + slot);
+            EntityLivingBase owner = entity.get();
+            if (owner == null || owner.worldObj.isRemote) return;
+            if (functional) replace(identifier, slot, stack);
+            else {
+                setRaw(slot, stack);
+                CuriosNetwork.sync(owner);
             }
-            CuriosNetwork.sync(entity.get());
         }
         private void setRaw(int slot, ItemStack stack) { values[slot] = stack; }
         private void clear() { java.util.Arrays.fill(values, null); }
