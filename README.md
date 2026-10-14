@@ -4,7 +4,7 @@ Curios 的 Minecraft 1.6.4 MITE / FishModLoader 移植项目，为 BountifulBaub
 
 ## 当前状态
 
-`0.1.0` 提供面向旧版 BountifulBaubles 的首批 Java API：可按需合并槽位类型，查询和操作实体饰品栏，并定义饰品装备回调。槽位默认为空，由内容模组注册。玩家存档持久化、物品合法性校验、容器 GUI、网络同步和游戏生命周期接入仍在移植中。
+`0.1.0` 提供面向旧版 BountifulBaubles 的首批 Java API：可按需合并槽位类型，查询和操作实体饰品栏，并定义饰品装备、卸下、tick 和属性修饰符回调。实体饰品栏与外观栏会随实体 NBT 存档，属性修饰符在饰品栏变化时更新。槽位默认为空，由内容模组注册；物品合法性校验、容器 GUI 和客户端网络同步仍在移植中。
 
 当前目录中的现代 Curios 源码（NeoForge 26.x）仅作为行为参考；接口设计优先兼容 BountifulBaubles 使用的旧版 Curios 契约。
 
