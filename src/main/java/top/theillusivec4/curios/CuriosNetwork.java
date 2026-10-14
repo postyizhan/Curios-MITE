@@ -10,6 +10,7 @@ import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
 import net.minecraft.ServerPlayer;
 import net.xiaoyu233.fml.reload.event.PlayerLoggedInEvent;
+import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.common.CuriosInventory;
 
 /** Server-authoritative synchronization for the owning player's Curios inventory. */
@@ -60,5 +61,37 @@ public final class CuriosNetwork {
         if (!(entity instanceof EntityLivingBase)) return;
         NBTTagCompound inventory = PENDING.remove(entity.entityId);
         if (inventory != null) CuriosInventory.get((EntityLivingBase) entity).readFromNBT(inventory);
+    }
+
+    public static void handleServerAction(byte[] data, ServerPlayer player) {
+        NBTTagCompound payload = decode(data);
+        if (payload == null || player == null || player.worldObj.isRemote
+            || !payload.hasKey("Source") || !payload.hasKey("Identifier") || !payload.hasKey("Index")) return;
+        String identifier = payload.getString("Identifier");
+        int index = payload.getInteger("Index");
+        int source = payload.getInteger("Source");
+        CuriosInventory inventory = CuriosInventory.get(player);
+        java.util.Optional<ICurioStacksHandler> slotHandler = inventory.getStacksHandler(identifier);
+        if (!slotHandler.isPresent() || index < 0 || index >= slotHandler.get().getStacks().getSlots()) return;
+        if (source == -1) {
+            net.minecraft.ItemStack removed = inventory.unequip(identifier, index);
+            if (removed != null) {
+                player.inventory.addItemStackToInventoryOrDropIt(removed);
+                player.inventoryContainer.detectAndSendChanges();
+            }
+            return;
+        } else if (source < 0) return;
+        if (source >= player.inventory.mainInventory.length) return;
+        net.minecraft.ItemStack original = player.inventory.mainInventory[source];
+        if (original == null || original.stackSize <= 0) return;
+        net.minecraft.ItemStack equipped = original.copy();
+        equipped.stackSize = 1;
+        if (!inventory.equip(identifier, index, equipped)) return;
+        if (original.stackSize == 1) player.inventory.setInventorySlotContents(source, null);
+        else {
+            original.stackSize--;
+            player.inventory.setInventorySlotContents(source, original);
+        }
+        player.inventoryContainer.detectAndSendChanges();
     }
 }

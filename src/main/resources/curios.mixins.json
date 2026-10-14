@@ -3,7 +3,7 @@
   "package": "top.theillusivec4.curios.mixin",
   "compatibilityLevel": "JAVA_17",
   "target": "DEFAULT",
-  "mixins": ["EntityLivingBaseMixin"],
-  "client": ["NetClientHandlerMixin"],
+  "mixins": ["EntityLivingBaseMixin", "NetServerHandlerMixin"],
+  "client": ["NetClientHandlerMixin", "GuiInventoryMixin"],
   "injectors": { "defaultRequire": 1 }
 }
