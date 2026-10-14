@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.theillusivec4.curios.CuriosConstants;
+import top.theillusivec4.curios.CuriosNetwork;
 import top.theillusivec4.curios.common.CuriosInventory;
 
 /** Runs equipped curio callbacks from the entity lifecycle on both logical sides. */
@@ -14,7 +15,9 @@ import top.theillusivec4.curios.common.CuriosInventory;
 public abstract class EntityLivingBaseMixin {
     @Inject(method = "onLivingUpdate", at = @At("TAIL"))
     private void curios$onLivingUpdate(CallbackInfo info) {
-        CuriosInventory.get((EntityLivingBase) (Object) this).tick();
+        EntityLivingBase entity = (EntityLivingBase) (Object) this;
+        CuriosInventory.get(entity).tick();
+        if (entity.worldObj.isRemote) CuriosNetwork.applyPending(entity);
     }
 
     @Inject(method = "writeEntityToNBT", at = @At("TAIL"))

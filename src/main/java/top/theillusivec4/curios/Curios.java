@@ -2,6 +2,7 @@ package top.theillusivec4.curios;
 
 import net.fabricmc.api.ModInitializer;
 import net.xiaoyu233.fml.ModResourceManager;
+import net.xiaoyu233.fml.reload.event.MITEEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,6 +14,7 @@ public final class Curios implements ModInitializer {
     @Override
     public void onInitialize() {
         ModResourceManager.addResourcePackDomain(MOD_ID);
+        MITEEvents.MITE_EVENT_BUS.register(new CuriosNetwork());
         LOGGER.info("Curios-MITE {} initialized", CuriosConstants.VERSION);
     }
 

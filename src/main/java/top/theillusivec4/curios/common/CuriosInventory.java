@@ -6,6 +6,7 @@ import java.lang.ref.WeakReference;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import top.theillusivec4.curios.CuriosNetwork;
 import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.BaseAttributeMap;
@@ -153,7 +154,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     private void applyAttributeChanges(Multimap<Attribute, AttributeModifier> previous) {
         EntityLivingBase owner = entity.get();
-        if (owner == null) return;
+        if (owner == null || owner.worldObj.isRemote) return;
         BaseAttributeMap attributes = owner.getAttributeMap();
         Multimap<Attribute, AttributeModifier> current = getAttributeModifiers();
         attributes.removeAttributeModifiers(previous);
@@ -184,7 +185,10 @@ public final class CuriosInventory implements ICuriosItemHandler {
         @Override public void setStackInSlot(int slot, ItemStack stack) {
             Multimap<Attribute, AttributeModifier> previous = functional ? CuriosInventory.this.getAttributeModifiers() : null;
             setRaw(slot, stack);
-            if (functional) CuriosInventory.this.applyAttributeChanges(previous);
+            if (functional) {
+                CuriosInventory.this.applyAttributeChanges(previous);
+            }
+            CuriosNetwork.sync(entity.get());
         }
         private void setRaw(int slot, ItemStack stack) { values[slot] = stack; }
         private void clear() { java.util.Arrays.fill(values, null); }
