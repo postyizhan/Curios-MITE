@@ -55,6 +55,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         StackHandler stacks = slot(identifier).stacks;
         return stacks.isValidSlot(index) ? stacks.getStackInSlot(index) : null;
     }
+    public IDynamicStackHandler getEquippedCurios() { return new EquippedStacks(); }
     @Override public boolean equip(String identifier, int index, ItemStack stack) {
         ensureSlotTypes();
         if (stack == null) return false;
@@ -178,6 +179,40 @@ public final class CuriosInventory implements ICuriosItemHandler {
     }
 
     private Slots slot(String id) { Slots s = slots.get(id); if (s == null) throw new IllegalArgumentException("Unknown Curios slot: " + id); return s; }
+
+    private SlotAddress resolveEquippedSlot(int index) {
+        ensureSlotTypes();
+        if (index < 0) throw new IndexOutOfBoundsException("Curios slot index: " + index);
+        for (Slots slot : slots.values()) {
+            int size = slot.stacks.getSlots();
+            if (index < size) return new SlotAddress(slot.stacks, index);
+            index -= size;
+        }
+        throw new IndexOutOfBoundsException("Curios slot index: " + index);
+    }
+
+    private final class EquippedStacks implements IDynamicStackHandler {
+        @Override public int getSlots() {
+            ensureSlotTypes();
+            int count = 0;
+            for (Slots slot : slots.values()) count += slot.stacks.getSlots();
+            return count;
+        }
+        @Override public ItemStack getStackInSlot(int index) {
+            SlotAddress address = resolveEquippedSlot(index);
+            return address.handler.getStackInSlot(address.index);
+        }
+        @Override public void setStackInSlot(int index, ItemStack stack) {
+            SlotAddress address = resolveEquippedSlot(index);
+            address.handler.setStackInSlot(address.index, stack);
+        }
+    }
+
+    private static final class SlotAddress {
+        private final IDynamicStackHandler handler;
+        private final int index;
+        private SlotAddress(IDynamicStackHandler handler, int index) { this.handler = handler; this.index = index; }
+    }
 
     private final class Slots implements ICurioStacksHandler {
         private final String id; private final StackHandler stacks, cosmetics;

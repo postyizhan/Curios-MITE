@@ -4,13 +4,27 @@ import java.util.Optional;
 import java.util.Map;
 import net.minecraft.EntityLivingBase;
 import top.theillusivec4.curios.api.type.ISlotType;
+import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import top.theillusivec4.curios.common.CuriosSlotRegistry;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.common.CuriosInventory;
 
 /** Stable access point for mods such as BountifulBaubles. */
 public final class CuriosApi {
+    private static final ICuriosHelper HELPER = new ICuriosHelper() {
+        @Override public Optional<ICuriosItemHandler> getCuriosHandler(EntityLivingBase entity) {
+            return CuriosApi.getCuriosHandler(entity);
+        }
+
+        @Override public Optional<IDynamicStackHandler> getEquippedCurios(EntityLivingBase entity) {
+            return entity == null ? Optional.<IDynamicStackHandler>empty()
+                : Optional.<IDynamicStackHandler>of(CuriosInventory.get(entity).getEquippedCurios());
+        }
+    };
+
     private CuriosApi() {}
+
+    public static ICuriosHelper getCuriosHelper() { return HELPER; }
 
     public static ISlotType registerSlotType(String identifier, int size) {
         return CuriosSlotRegistry.register(identifier, size);
