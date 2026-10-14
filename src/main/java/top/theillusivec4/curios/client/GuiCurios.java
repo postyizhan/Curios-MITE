@@ -11,8 +11,8 @@ import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
 import top.theillusivec4.curios.CuriosNetwork;
 import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
+import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 /** Compact inventory page for equipping and removing Curios. */
 public final class GuiCurios extends GuiScreen {
@@ -20,21 +20,26 @@ public final class GuiCurios extends GuiScreen {
     private final List<SlotRef> visibleSlots = new ArrayList<SlotRef>();
     private int selectedSource = -1;
     private int slotPage;
+    private boolean cosmeticMode;
 
     @Override public void initGui() {
         buttonList.clear();
         buttonList.add(new GuiButton(0, width / 2 - 100, height - 28, 90, 20, "上一页"));
         buttonList.add(new GuiButton(1, width / 2 + 10, height - 28, 90, 20, "下一页"));
         buttonList.add(new GuiButton(2, width - 88, height - 28, 80, 20, "返回"));
+        buttonList.add(new GuiButton(3, width / 2 - 45, height - 52, 90, 20, "外观: 关闭"));
         rebuildVisibleSlots();
     }
 
     private void rebuildVisibleSlots() {
         visibleSlots.clear();
-        for (ISlotType type : CuriosApi.getSlotTypes().values()) {
-            if (!type.isVisible()) continue;
-            for (int index = 0; index < type.getSize(); index++) {
-                visibleSlots.add(new SlotRef(type.getIdentifier(), index));
+        EntityClientPlayerMP player = mc.thePlayer;
+        ICuriosItemHandler handler = player == null ? null : CuriosApi.getCuriosHandler(player).orElse(null);
+        if (handler == null) return;
+        for (ICurioStacksHandler type : handler.getCurios().values()) {
+            if (!type.isVisible() || (cosmeticMode && !type.hasCosmetic())) continue;
+            for (int index = 0; index < type.getSlots(); index++) {
+                visibleSlots.add(new SlotRef(type.getIdentifier(), index, type.hasCosmetic()));
             }
         }
     }
@@ -43,6 +48,13 @@ public final class GuiCurios extends GuiScreen {
         if (button.id == 0) slotPage = Math.max(0, slotPage - 1);
         else if (button.id == 1) slotPage = Math.min(Math.max(0, (visibleSlots.size() - 1) / SLOT_PAGE_SIZE), slotPage + 1);
         else if (button.id == 2) mc.displayGuiScreen(null);
+        else if (button.id == 3) {
+            cosmeticMode = !cosmeticMode;
+            slotPage = 0;
+            selectedSource = -1;
+            button.displayString = cosmeticMode ? "外观: 开启" : "外观: 关闭";
+            rebuildVisibleSlots();
+        }
     }
 
     @Override protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
@@ -54,7 +66,7 @@ public final class GuiCurios extends GuiScreen {
                 EntityClientPlayerMP player = mc.thePlayer;
                 if (player != null && inventorySlot < player.inventory.mainInventory.length) {
                     ItemStack stack = player.inventory.mainInventory[inventorySlot];
-                    if (stack != null && stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem) {
+                    if (stack != null && (cosmeticMode || stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem)) {
                         selectedSource = selectedSource == inventorySlot ? -1 : inventorySlot;
                     }
                     return;
@@ -68,7 +80,7 @@ public final class GuiCurios extends GuiScreen {
                 int listIndex = slotPage * SLOT_PAGE_SIZE + row * 2 + column;
                 if (listIndex < visibleSlots.size()) {
                     SlotRef slot = visibleSlots.get(listIndex);
-                    sendAction(selectedSource, slot.identifier, slot.index);
+                    sendAction(selectedSource, slot.identifier, slot.index, cosmeticMode);
                     selectedSource = -1;
                 }
                 return;
@@ -80,7 +92,7 @@ public final class GuiCurios extends GuiScreen {
     @Override public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
         drawCenteredString(fontRenderer, "饰品", width / 2, 12, 0xFFFFFF);
-        drawString(fontRenderer, "选择背包中的饰品，再选择目标槽位；空手选择槽位可卸下", 16, 32, 0xD0D0D0);
+        drawString(fontRenderer, cosmeticMode ? "选择物品后点击外观槽，空手选择槽位可卸下" : "选择饰品后点击槽位，空手选择槽位可卸下", 16, 32, 0xD0D0D0);
         drawString(fontRenderer, "背包物品", 16, 40, 0xFFFFFF);
         drawString(fontRenderer, "已注册槽位", width / 2 + 12, 40, 0xFFFFFF);
         drawSources(mouseX, mouseY);
@@ -96,7 +108,7 @@ public final class GuiCurios extends GuiScreen {
                 int index = column * 18 + row;
                 if (index >= player.inventory.mainInventory.length) continue;
                 ItemStack stack = player.inventory.mainInventory[index];
-                if (stack == null || !(stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem)) continue;
+                if (stack == null || (!cosmeticMode && !(stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem))) continue;
                 int x = 16 + column * 150;
                 int y = 52 + row * 18;
                 int color = selectedSource == index ? 0xFFFF55 : 0xFFFFFF;
@@ -117,7 +129,10 @@ public final class GuiCurios extends GuiScreen {
             int x = width / 2 + 12 + column * 150;
             int y = 52 + row * 34;
             SlotRef slot = visibleSlots.get(listIndex);
-            ItemStack stack = handler == null ? null : handler.getEquippedStack(slot.identifier, slot.index);
+            ICurioStacksHandler stacks = handler == null ? null : handler.getStacksHandler(slot.identifier).orElse(null);
+            ItemStack stack = stacks == null ? null : (cosmeticMode
+                ? stacks.getCosmeticStacks().getStackInSlot(slot.index)
+                : stacks.getStacks().getStackInSlot(slot.index));
             String label = slot.identifier + " " + (slot.index + 1) + ": " + (stack == null ? "空" : trim(stack.getDisplayName(), 12));
             int color = mouseX >= x - 3 && mouseX < x + 145 && mouseY >= y - 3 && mouseY < y + 20 ? 0xFFFF55 : 0xFFFFFF;
             drawString(fontRenderer, trim(label, 24), x, y, color);
@@ -130,13 +145,14 @@ public final class GuiCurios extends GuiScreen {
         return value.length() <= maxLength ? value : value.substring(0, maxLength - 1) + "…";
     }
 
-    private void sendAction(int sourceSlot, String identifier, int index) {
+    private void sendAction(int sourceSlot, String identifier, int index, boolean cosmetic) {
         EntityClientPlayerMP player = mc.thePlayer;
         if (player == null || player.sendQueue == null) return;
         NBTTagCompound payload = new NBTTagCompound();
         payload.setInteger("Source", sourceSlot);
         payload.setString("Identifier", identifier);
         payload.setInteger("Index", index);
+        payload.setBoolean("Cosmetic", cosmetic);
         try {
             player.sendQueue.addToSendQueue(new Packet250CustomPayload(
                 CuriosNetwork.CHANNEL, CompressedStreamTools.compress(payload)));
@@ -148,6 +164,11 @@ public final class GuiCurios extends GuiScreen {
     private static final class SlotRef {
         private final String identifier;
         private final int index;
-        private SlotRef(String identifier, int index) { this.identifier = identifier; this.index = index; }
+        private final boolean hasCosmetic;
+        private SlotRef(String identifier, int index, boolean hasCosmetic) {
+            this.identifier = identifier;
+            this.index = index;
+            this.hasCosmetic = hasCosmetic;
+        }
     }
 }

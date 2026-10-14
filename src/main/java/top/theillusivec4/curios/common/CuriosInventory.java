@@ -3,9 +3,14 @@ package top.theillusivec4.curios.common;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.BaseAttributeMap;
@@ -25,6 +30,10 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 public final class CuriosInventory implements ICuriosItemHandler {
     private static final Map<EntityLivingBase, CuriosInventory> INSTANCES = new java.util.WeakHashMap<EntityLivingBase, CuriosInventory>();
     private final Map<String, Slots> slots = new LinkedHashMap<String, Slots>();
+    private final Set<String> lockedSlots = new HashSet<String>();
+    private final Set<String> initializedSlots = new HashSet<String>();
+    private final Set<String> pendingLocks = new HashSet<String>();
+    private final List<UnlockState> pendingUnlocks = new ArrayList<UnlockState>();
     private final WeakReference<EntityLivingBase> entity;
 
     public static synchronized CuriosInventory get(EntityLivingBase entity) {
@@ -38,9 +47,16 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     private synchronized void syncSlotTypes() {
         for (ISlotType type : CuriosSlotRegistry.getAll().values()) {
+            String identifier = type.getIdentifier();
+            if (initializedSlots.add(identifier) && type.isLocked()) lockedSlots.add(identifier);
+            if (lockedSlots.contains(identifier)) continue;
             Slots current = slots.get(type.getIdentifier());
-            if (current == null) slots.put(type.getIdentifier(), new Slots(type.getIdentifier(), type.getSize()));
-            else current.resize(type.getSize());
+            if (current == null) slots.put(identifier, new Slots(identifier, type.getSize(), type.isVisible(), type.hasCosmetic()));
+            else {
+                current.resize(Math.max(1, type.getSize() + current.sizeShift));
+                current.visible &= type.isVisible();
+                current.cosmetic |= type.hasCosmetic();
+            }
         }
     }
 
@@ -56,6 +72,26 @@ public final class CuriosInventory implements ICuriosItemHandler {
         return stacks.isValidSlot(index) ? stacks.getStackInSlot(index) : null;
     }
     public IDynamicStackHandler getEquippedCurios() { return new EquippedStacks(); }
+    @Override public Map<String, ICurioStacksHandler> getCurios() {
+        ensureSlotTypes();
+        Map<String, ICurioStacksHandler> result = new LinkedHashMap<String, ICurioStacksHandler>();
+        result.putAll(slots);
+        return Collections.unmodifiableMap(result);
+    }
+    @Override public int getSlots() {
+        ensureSlotTypes();
+        int count = 0;
+        for (Slots slot : slots.values()) count += slot.getSlots();
+        return count;
+    }
+    @Override public int getVisibleSlots() {
+        ensureSlotTypes();
+        int count = 0;
+        for (Slots slot : slots.values()) if (slot.isVisible()) count += slot.getSlots();
+        return count;
+    }
+    @Override public Set<String> getLockedSlots() { return Collections.unmodifiableSet(lockedSlots); }
+
     @Override public boolean equip(String identifier, int index, ItemStack stack) {
         ensureSlotTypes();
         if (stack == null) return false;
@@ -86,6 +122,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         ensureSlotTypes();
         EntityLivingBase owner = entity.get();
         if (owner == null) return;
+        processSlots();
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             IDynamicStackHandler stacks = entry.getValue().getStacks();
             for (int i = 0; i < stacks.getSlots(); i++) {
@@ -101,6 +138,13 @@ public final class CuriosInventory implements ICuriosItemHandler {
         NBTTagList savedSlots = new NBTTagList();
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             Slots slot = entry.getValue();
+            NBTTagCompound slotState = new NBTTagCompound();
+            slotState.setString("Identifier", entry.getKey());
+            slotState.setBoolean("State", true);
+            slotState.setInteger("SizeShift", slot.sizeShift);
+            slotState.setBoolean("Visible", slot.visible);
+            slotState.setBoolean("CosmeticEnabled", slot.cosmetic);
+            savedSlots.appendTag(slotState);
             for (int i = 0; i < slot.stacks.getSlots(); i++) {
                 ItemStack stack = slot.stacks.getStackInSlot(i);
                 ItemStack cosmetic = slot.cosmetics.getStackInSlot(i);
@@ -114,6 +158,13 @@ public final class CuriosInventory implements ICuriosItemHandler {
             }
         }
         data.setTag("Slots", savedSlots);
+        NBTTagList savedLocks = new NBTTagList();
+        for (String identifier : lockedSlots) {
+            NBTTagCompound lock = new NBTTagCompound();
+            lock.setString("Identifier", identifier);
+            savedLocks.appendTag(lock);
+        }
+        data.setTag("Locked", savedLocks);
         return data;
     }
 
@@ -124,10 +175,46 @@ public final class CuriosInventory implements ICuriosItemHandler {
             slot.stacks.clear();
             slot.cosmetics.clear();
         }
+        slots.clear();
+        lockedSlots.clear();
+        initializedSlots.clear();
+        for (ISlotType type : CuriosSlotRegistry.getAll().values()) {
+            initializedSlots.add(type.getIdentifier());
+            if (type.isLocked()) lockedSlots.add(type.getIdentifier());
+            else slots.put(type.getIdentifier(), new Slots(type.getIdentifier(), type.getSize(), type.isVisible(), type.hasCosmetic()));
+        }
         NBTTagList savedSlots = data.getTagList("Slots");
         for (int i = 0; i < savedSlots.tagCount(); i++) {
             if (!(savedSlots.tagAt(i) instanceof NBTTagCompound)) continue;
             NBTTagCompound savedSlot = (NBTTagCompound) savedSlots.tagAt(i);
+            if (!savedSlot.hasKey("State")) continue;
+            String identifier = savedSlot.getString("Identifier");
+            ISlotType type = CuriosSlotRegistry.get(identifier).orElse(null);
+            Slots slot = slots.get(identifier);
+            if (slot == null) {
+                slot = new Slots(identifier, type == null ? 1 : type.getSize(),
+                    type == null || type.isVisible(), type != null && type.hasCosmetic());
+                slots.put(identifier, slot);
+                lockedSlots.remove(identifier);
+            }
+            slot.sizeShift = savedSlot.getInteger("SizeShift");
+            slot.resize(Math.max(1, Math.min(256, (type == null ? 1 : type.getSize()) + slot.sizeShift)));
+            slot.visible = savedSlot.getBoolean("Visible");
+            slot.cosmetic = savedSlot.getBoolean("CosmeticEnabled");
+        }
+        NBTTagList savedLocks = data.getTagList("Locked");
+        for (int i = 0; i < savedLocks.tagCount(); i++) {
+            if (savedLocks.tagAt(i) instanceof NBTTagCompound) {
+                String identifier = ((NBTTagCompound) savedLocks.tagAt(i)).getString("Identifier");
+                slots.remove(identifier);
+                lockedSlots.add(identifier);
+                initializedSlots.add(identifier);
+            }
+        }
+        for (int i = 0; i < savedSlots.tagCount(); i++) {
+            if (!(savedSlots.tagAt(i) instanceof NBTTagCompound)) continue;
+            NBTTagCompound savedSlot = (NBTTagCompound) savedSlots.tagAt(i);
+            if (savedSlot.hasKey("State")) continue;
             Slots slot = slots.get(savedSlot.getString("Identifier"));
             int index = savedSlot.getInteger("Index");
             if (slot == null || !slot.stacks.isValidSlot(index)) continue;
@@ -180,6 +267,99 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     private Slots slot(String id) { Slots s = slots.get(id); if (s == null) throw new IllegalArgumentException("Unknown Curios slot: " + id); return s; }
 
+    @Override public void unlockSlotType(String identifier, int amount, boolean visible, boolean cosmetic) {
+        if (identifier == null || amount < 1 || amount > 256) throw new IllegalArgumentException("Invalid Curios slot unlock request");
+        pendingUnlocks.add(new UnlockState(identifier, amount, visible, cosmetic));
+    }
+
+    @Override public void lockSlotType(String identifier) {
+        if (identifier != null) pendingLocks.add(identifier);
+    }
+
+    @Override public void processSlots() {
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote) return;
+        boolean changed = false;
+        Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        List<Runnable> unequipCallbacks = new ArrayList<Runnable>();
+        for (String identifier : pendingLocks) {
+            Slots removed = slots.remove(identifier);
+            if (removed == null) continue;
+            changed = true;
+            lockedSlots.add(identifier);
+            for (int i = 0; i < removed.getSlots(); i++) {
+                final int slotIndex = i;
+                ICurio curio = getCurio(removed.stacks.getStackInSlot(i));
+                if (curio != null) unequipCallbacks.add(() -> curio.onUnequip(identifier, slotIndex, owner));
+                returnStack(owner, removed.stacks.getStackInSlot(i));
+                returnStack(owner, removed.cosmetics.getStackInSlot(i));
+            }
+        }
+        pendingLocks.clear();
+        for (UnlockState unlock : pendingUnlocks) {
+            if (slots.containsKey(unlock.identifier)) continue;
+            slots.put(unlock.identifier, new Slots(unlock.identifier, unlock.amount, unlock.visible, unlock.cosmetic));
+            lockedSlots.remove(unlock.identifier);
+            initializedSlots.add(unlock.identifier);
+            changed = true;
+        }
+        pendingUnlocks.clear();
+        if (changed) {
+            applyAttributeChanges(previousModifiers);
+            for (Runnable callback : unequipCallbacks) callback.run();
+            CuriosNetwork.sync(owner);
+        }
+    }
+
+    @Override public void growSlotType(String identifier, int amount) {
+        if (amount <= 0) return;
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote) return;
+        Slots slot = slots.get(identifier);
+        if (slot != null) slot.grow(amount);
+        if (slot != null) CuriosNetwork.sync(owner);
+    }
+
+    @Override public void shrinkSlotType(String identifier, int amount) {
+        if (amount <= 0) return;
+        Slots slot = slots.get(identifier);
+        EntityLivingBase owner = entity.get();
+        if (slot == null || owner == null) return;
+        int shrink = Math.min(amount, slot.getSlots() - 1);
+        if (shrink == 0) return;
+        Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        for (int i = slot.getSlots() - shrink; i < slot.getSlots(); i++) {
+            ICurio curio = getCurio(slot.stacks.getStackInSlot(i));
+            if (curio != null) curio.onUnequip(identifier, i, owner);
+            returnStack(owner, slot.stacks.getStackInSlot(i));
+            returnStack(owner, slot.cosmetics.getStackInSlot(i));
+        }
+        slot.shrink(shrink);
+        applyAttributeChanges(previousModifiers);
+        if (!owner.worldObj.isRemote) CuriosNetwork.sync(owner);
+    }
+
+    private void returnStack(EntityLivingBase owner, ItemStack stack) {
+        if (stack == null) return;
+        if (owner instanceof net.minecraft.ServerPlayer) {
+            ((net.minecraft.ServerPlayer) owner).inventory.addItemStackToInventoryOrDropIt(stack);
+        } else {
+            owner.dropItemStack(stack, 0.0F);
+        }
+    }
+
+    public ItemStack setCosmetic(String identifier, int index, ItemStack stack) {
+        ensureSlotTypes();
+        Slots slot = slot(identifier);
+        if (!slot.cosmetic || !slot.cosmetics.isValidSlot(index)) return null;
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote) return null;
+        ItemStack previous = slot.cosmetics.getStackInSlot(index);
+        slot.cosmetics.setRaw(index, stack);
+        CuriosNetwork.sync(owner);
+        return previous;
+    }
+
     private SlotAddress resolveEquippedSlot(int index) {
         ensureSlotTypes();
         if (index < 0) throw new IndexOutOfBoundsException("Curios slot index: " + index);
@@ -216,36 +396,86 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     private final class Slots implements ICurioStacksHandler {
         private final String id; private final StackHandler stacks, cosmetics;
-        private Slots(String id, int size) { this.id = id; this.stacks = new StackHandler(id, size, true); this.cosmetics = new StackHandler(id, size, false); }
+        private int sizeShift;
+        private boolean visible;
+        private boolean cosmetic;
+        private Slots(String id, int size, boolean visible, boolean cosmetic) {
+            this.id = id;
+            this.stacks = new StackHandler(id, size, true);
+            this.cosmetics = new StackHandler(id, size, false);
+            this.visible = visible;
+            this.cosmetic = cosmetic;
+        }
         @Override public String getIdentifier() { return id; }
         @Override public IDynamicStackHandler getStacks() { return stacks; }
         @Override public IDynamicStackHandler getCosmeticStacks() { return cosmetics; }
+        @Override public int getSlots() { return stacks.getSlots(); }
+        @Override public int getSizeShift() { return sizeShift; }
+        @Override public boolean isVisible() { return visible; }
+        @Override public boolean hasCosmetic() { return cosmetic; }
         private void resize(int size) { stacks.resize(size); cosmetics.resize(size); }
+        private void grow(int amount) { resize(getSlots() + amount); sizeShift += amount; }
+        private void shrink(int amount) { resize(Math.max(1, getSlots() - amount)); sizeShift -= amount; }
+    }
+
+    private static final class UnlockState {
+        private final String identifier;
+        private final int amount;
+        private final boolean visible;
+        private final boolean cosmetic;
+        private UnlockState(String identifier, int amount, boolean visible, boolean cosmetic) {
+            this.identifier = identifier;
+            this.amount = amount;
+            this.visible = visible;
+            this.cosmetic = cosmetic;
+        }
     }
     private final class StackHandler implements IDynamicStackHandler {
         private ItemStack[] values;
+        private ItemStack[] previousValues;
         private final String identifier;
         private final boolean functional;
         private StackHandler(String identifier, int size, boolean functional) {
             values = new ItemStack[size];
+            previousValues = new ItemStack[size];
             this.identifier = identifier;
             this.functional = functional;
         }
         @Override public int getSlots() { return values.length; }
         @Override public ItemStack getStackInSlot(int slot) { return values[slot]; }
+        @Override public ItemStack getPreviousStackInSlot(int slot) { return previousValues[slot]; }
+        @Override public void setPreviousStackInSlot(int slot, ItemStack stack) {
+            if (!isValidSlot(slot)) throw new IndexOutOfBoundsException("Curios slot index: " + slot);
+            previousValues[slot] = stack;
+        }
+        @Override public void grow(int amount) {
+            if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
+            resize(values.length + amount);
+        }
+        @Override public void shrink(int amount) {
+            if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
+            resize(Math.max(0, values.length - amount));
+        }
         @Override public void setStackInSlot(int slot, ItemStack stack) {
             if (!isValidSlot(slot)) throw new IndexOutOfBoundsException("Curios slot index: " + slot);
             EntityLivingBase owner = entity.get();
             if (owner == null || owner.worldObj.isRemote) return;
             if (functional) replace(identifier, slot, stack);
-            else {
+            else if (CuriosInventory.this.slot(identifier).hasCosmetic()) {
                 setRaw(slot, stack);
                 CuriosNetwork.sync(owner);
             }
         }
         private void setRaw(int slot, ItemStack stack) { values[slot] = stack; }
-        private void clear() { java.util.Arrays.fill(values, null); }
+        private void clear() {
+            java.util.Arrays.fill(values, null);
+            java.util.Arrays.fill(previousValues, null);
+        }
         private boolean isValidSlot(int slot) { return slot >= 0 && slot < values.length; }
-        private void resize(int size) { if (size > values.length) values = java.util.Arrays.copyOf(values, size); }
+        private void resize(int size) {
+            if (size == values.length) return;
+            values = java.util.Arrays.copyOf(values, size);
+            previousValues = java.util.Arrays.copyOf(previousValues, size);
+        }
     }
 }

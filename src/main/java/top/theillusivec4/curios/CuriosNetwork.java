@@ -70,11 +70,14 @@ public final class CuriosNetwork {
         String identifier = payload.getString("Identifier");
         int index = payload.getInteger("Index");
         int source = payload.getInteger("Source");
+        boolean cosmetic = payload.hasKey("Cosmetic") && payload.getBoolean("Cosmetic");
         CuriosInventory inventory = CuriosInventory.get(player);
         java.util.Optional<ICurioStacksHandler> slotHandler = inventory.getStacksHandler(identifier);
         if (!slotHandler.isPresent() || index < 0 || index >= slotHandler.get().getStacks().getSlots()) return;
         if (source == -1) {
-            net.minecraft.ItemStack removed = inventory.unequip(identifier, index);
+            net.minecraft.ItemStack removed = cosmetic
+                ? inventory.setCosmetic(identifier, index, null)
+                : inventory.unequip(identifier, index);
             if (removed != null) {
                 player.inventory.addItemStackToInventoryOrDropIt(removed);
                 player.inventoryContainer.detectAndSendChanges();
@@ -86,6 +89,18 @@ public final class CuriosNetwork {
         if (original == null || original.stackSize <= 0) return;
         net.minecraft.ItemStack equipped = original.copy();
         equipped.stackSize = 1;
+        if (cosmetic) {
+            if (!slotHandler.get().hasCosmetic()) return;
+            net.minecraft.ItemStack previous = inventory.setCosmetic(identifier, index, equipped);
+            if (original.stackSize == 1) player.inventory.setInventorySlotContents(source, null);
+            else {
+                original.stackSize--;
+                player.inventory.setInventorySlotContents(source, original);
+            }
+            if (previous != null) player.inventory.addItemStackToInventoryOrDropIt(previous);
+            player.inventoryContainer.detectAndSendChanges();
+            return;
+        }
         if (!inventory.equip(identifier, index, equipped)) return;
         if (original.stackSize == 1) player.inventory.setInventorySlotContents(source, null);
         else {
