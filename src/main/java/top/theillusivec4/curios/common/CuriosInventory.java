@@ -19,10 +19,10 @@ import net.minecraft.ItemStack;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.NBTTagList;
 import top.theillusivec4.curios.CuriosNetwork;
+import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.capability.ICurio;
-import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
@@ -239,8 +239,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
     }
 
     private ICurio getCurio(ItemStack stack) {
-        if (stack == null || stack.getItem() == null) return null;
-        return stack.getItem() instanceof ICurioItem ? ((ICurioItem) stack.getItem()).getCurio(stack) : null;
+        return CuriosApi.getCurio(stack).orElse(null);
     }
 
     private boolean replace(String identifier, int index, ItemStack stack) {
