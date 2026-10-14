@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+  "name": "${name}",
+  "description": "Curios accessory slots and API for Minecraft 1.6.4 MITE.",
+  "authors": ["The Curios-MITE contributors"],
+  "license": "LGPL-3.0-or-later",
+  "icon": "assets/curios/icon.png",
+  "environment": "*",
+  "entrypoints": { "main": ["top.theillusivec4.curios.Curios"] },
+  "mixins": ["curios.mixins.json"],
+  "depends": { "fishmodloader": ">=3.4.0", "minecraft": "1.6.4-mite", "java": ">=17" },
+  "accessWidener": "curios.accessWidener"
+}

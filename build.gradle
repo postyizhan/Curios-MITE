@@ -1,0 +1,56 @@
+plugins {
+    id 'fml-loom' version '0.1'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+base.archivesName = project.archives_base_name
+
+repositories {
+    maven { name = 'ModdedMITE'; url = 'https://maven.limingzxc.top/repository/maven-public/' }
+    mavenCentral()
+}
+
+configurations { fml }
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation 'it.unimi.dsi:fastutil:8.5.12'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    fml "com.github.MinecraftIsTooEasy:FishModLoader:${project.loader_version}"
+    implementation "com.github.MinecraftIsTooEasy:FishModLoader:${project.loader_version}"
+}
+
+def fmlResolvedFile = configurations.fml.singleFile
+
+loom {
+    accessWidenerPath = file('src/main/resources/curios.accessWidener')
+    mergedMinecraftJar()
+    setFML(fmlResolvedFile)
+    dependencies.add('mappings', fmlMCPMappings())
+    mods {
+        curios { sourceSet sourceSets.main }
+    }
+    runs {
+        client {
+            String name = project.username
+            programArgs '--userProperties', '{}', '--username', name, '--session', '0', '--width', project.screen_width, '--height', project.screen_height
+        }
+    }
+}
+
+processResources {
+    inputs.properties(version: project.version, id: project.mod_id, name: project.mod_name)
+    filesMatching('fml.mod.json') { expand(inputs.properties) }
+}
+
+tasks.withType(JavaCompile).configureEach { options.release = 17; options.encoding = 'UTF-8' }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+
+jar {
+    inputs.property 'archivesName', project.archives_base_name
+    from('LICENSE') { rename { "${it}_${inputs.properties.archivesName}" } }
+}
+
+publishing { publications { mavenJava(MavenPublication) { from components.java } } }
