@@ -23,6 +23,8 @@ public final class CuriosNetwork {
     private static final Map<Integer, NBTTagCompound> PENDING = new HashMap<Integer, NBTTagCompound>();
     private static final Map<Integer, List<NBTTagCompound>> PENDING_CURIO_DATA =
         new HashMap<Integer, List<NBTTagCompound>>();
+    private static final Map<Integer, List<NBTTagCompound>> PENDING_BREAK_EVENTS =
+        new HashMap<Integer, List<NBTTagCompound>>();
 
     @Subscribe
     public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
@@ -131,11 +133,13 @@ public final class CuriosNetwork {
         if (payload == null || !payload.hasKey("Entity")) return;
         int entityId = payload.getInteger("Entity");
         if (payload.getBoolean("Break")) {
-            if (!(entity instanceof EntityLivingBase) || !payload.hasKey("Stack")) return;
-            EntityLivingBase living = (EntityLivingBase) entity;
-            ItemStack broken = ItemStack.loadItemStackFromNBT(payload.getCompoundTag("Stack"));
-            top.theillusivec4.curios.api.CuriosApi.getCurio(broken)
-                .ifPresent(curio -> curio.curioBreak(broken, living));
+            if (!payload.hasKey("Stack")) return;
+            if (!(entity instanceof EntityLivingBase)) {
+                PENDING_BREAK_EVENTS.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
+                    .add((NBTTagCompound) payload.copy());
+            } else {
+                applyBreakEvent(payload, (EntityLivingBase) entity);
+            }
             return;
         }
         if (payload.getBoolean("CurioData")) {
@@ -164,6 +168,16 @@ public final class CuriosNetwork {
         if (curioData != null) {
             for (NBTTagCompound payload : curioData) applyCurioData(payload, (EntityLivingBase) entity);
         }
+        List<NBTTagCompound> breakEvents = PENDING_BREAK_EVENTS.remove(entity.entityId);
+        if (breakEvents != null) {
+            for (NBTTagCompound payload : breakEvents) applyBreakEvent(payload, (EntityLivingBase) entity);
+        }
+    }
+
+    private static void applyBreakEvent(NBTTagCompound payload, EntityLivingBase entity) {
+        ItemStack broken = ItemStack.loadItemStackFromNBT(payload.getCompoundTag("Stack"));
+        top.theillusivec4.curios.api.CuriosApi.getCurio(broken)
+            .ifPresent(curio -> curio.curioBreak(broken, entity));
     }
 
     private static void applyCurioData(NBTTagCompound payload, EntityLivingBase entity) {
