@@ -235,7 +235,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
             for (int index = 0; index < slot.getSlots(); index++) {
                 NBTTagCompound renderState = new NBTTagCompound();
                 renderState.setInteger("Index", index);
-                renderState.setBoolean("Render", slot.renders.get(index));
+                renderState.setBoolean("Render", slot.getRenders().get(index));
                 renderStates.appendTag(renderState);
             }
             slotState.setTag("Renders", renderStates);
@@ -580,7 +580,15 @@ public final class CuriosInventory implements ICuriosItemHandler {
         @Override public String getIdentifier() { return id; }
         @Override public IDynamicStackHandler getStacks() { return stacks; }
         @Override public IDynamicStackHandler getCosmeticStacks() { return cosmetics; }
-        @Override public List<Boolean> getRenders() { return renders; }
+        @Override public List<Boolean> getRenders() {
+            int size = stacks.getSlots();
+            while (renders.size() < size) renders.add(Boolean.TRUE);
+            while (renders.size() > size) renders.remove(renders.size() - 1);
+            for (int index = 0; index < size; index++) {
+                if (renders.get(index) == null) renders.set(index, Boolean.TRUE);
+            }
+            return renders;
+        }
         @Override public int getSlots() { return stacks.getSlots(); }
         @Override public int getSizeShift() { return sizeShift; }
         @Override public boolean isVisible() { return visible; }
