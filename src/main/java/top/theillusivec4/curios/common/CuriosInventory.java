@@ -667,10 +667,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
             EntityLivingBase owner = entity.get();
             if (owner == null || owner.worldObj.isRemote) return;
             if (functional) replace(identifier, slot, stack);
-            else if (CuriosInventory.this.slot(identifier).hasCosmetic()) {
-                setRaw(slot, stack);
-                CuriosNetwork.sync(owner);
-            }
+            else if (CuriosInventory.this.slot(identifier).hasCosmetic()) setCosmetic(identifier, slot, stack);
         }
         private void setRaw(int slot, ItemStack stack) { values[slot] = stack; }
         private void clear() {
