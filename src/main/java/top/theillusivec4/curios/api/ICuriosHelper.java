@@ -1,6 +1,7 @@
 package top.theillusivec4.curios.api;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import com.google.common.collect.Multimap;
 import net.minecraft.Attribute;
@@ -17,6 +18,7 @@ public interface ICuriosHelper {
     Optional<ICurio> getCurio(ItemStack stack);
     Optional<ICuriosItemHandler> getCuriosHandler(EntityLivingBase entity);
     Optional<IDynamicStackHandler> getEquippedCurios(EntityLivingBase entity);
+    Set<String> getCurioTags(Item item);
     Optional<EquippedCurio> findEquippedCurio(Item item, EntityLivingBase entity);
     Optional<EquippedCurio> findEquippedCurio(Predicate<ItemStack> predicate, EntityLivingBase entity);
     void onBrokenCurio(String identifier, int index, EntityLivingBase entity);

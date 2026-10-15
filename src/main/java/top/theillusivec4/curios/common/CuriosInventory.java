@@ -111,7 +111,8 @@ public final class CuriosInventory implements ICuriosItemHandler {
         int targetIndex = -1;
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             StackHandler stacks = entry.getValue().stacks;
-            if (!curio.canEquip(entry.getKey(), player)) continue;
+            if (!CuriosApi.isValidForSlot(heldStack.getItem(), entry.getKey())
+                || !curio.canEquip(entry.getKey(), player)) continue;
             for (int index = 0; index < stacks.getSlots(); index++) {
                 if (stacks.getStackInSlot(index) == null) {
                     targetIdentifier = entry.getKey();
@@ -383,7 +384,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (owner == null || owner.worldObj.isRemote) return false;
         ICurio previousCurio = getCurio(previousStack);
         ICurio nextCurio = getCurio(stack);
-        if (stack != null && nextCurio == null) return false;
+        if (stack != null && (nextCurio == null || !CuriosApi.isValidForSlot(stack.getItem(), identifier))) return false;
         if (previousCurio != null && !previousCurio.canUnequip(identifier, owner)) return false;
         if (nextCurio != null && !nextCurio.canEquip(identifier, owner)) return false;
 

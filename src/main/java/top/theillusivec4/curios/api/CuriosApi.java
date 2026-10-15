@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import com.google.common.collect.HashMultimap;
@@ -26,6 +28,8 @@ import top.theillusivec4.curios.common.CuriosInventory;
 public final class CuriosApi {
     private static final Map<Item, Function<ItemStack, ICurio>> CURIO_PROVIDERS =
         Collections.synchronizedMap(new IdentityHashMap<Item, Function<ItemStack, ICurio>>());
+    private static final Map<Item, Set<String>> CURIO_TAGS =
+        Collections.synchronizedMap(new IdentityHashMap<Item, Set<String>>());
     private static final ICuriosHelper HELPER = new ICuriosHelper() {
         @Override public Optional<ICurio> getCurio(ItemStack stack) { return CuriosApi.getCurio(stack); }
 
@@ -36,6 +40,15 @@ public final class CuriosApi {
         @Override public Optional<IDynamicStackHandler> getEquippedCurios(EntityLivingBase entity) {
             return entity == null ? Optional.<IDynamicStackHandler>empty()
                 : Optional.<IDynamicStackHandler>of(CuriosInventory.get(entity).getEquippedCurios());
+        }
+
+        @Override public Set<String> getCurioTags(Item item) {
+            if (item == null) return Collections.emptySet();
+            synchronized (CURIO_TAGS) {
+                Set<String> tags = CURIO_TAGS.get(item);
+                return tags == null ? Collections.emptySet()
+                    : Collections.unmodifiableSet(new LinkedHashSet<String>(tags));
+            }
         }
 
         @Override public Optional<EquippedCurio> findEquippedCurio(Item item, EntityLivingBase entity) {
@@ -75,6 +88,20 @@ public final class CuriosApi {
     public static void registerCurioProvider(Item item, Function<ItemStack, ICurio> provider) {
         if (item == null || provider == null) throw new IllegalArgumentException("Curio item and provider are required");
         CURIO_PROVIDERS.put(item, provider);
+    }
+
+    public static void registerCurioTag(Item item, String identifier) {
+        if (item == null || identifier == null || identifier.isEmpty()) {
+            throw new IllegalArgumentException("Curio item and tag identifier are required");
+        }
+        synchronized (CURIO_TAGS) {
+            CURIO_TAGS.computeIfAbsent(item, ignored -> new LinkedHashSet<String>()).add(identifier);
+        }
+    }
+
+    public static boolean isValidForSlot(Item item, String identifier) {
+        Set<String> tags = HELPER.getCurioTags(item);
+        return tags.isEmpty() || tags.contains(identifier) || tags.contains("curio");
     }
 
     public static Optional<ICurio> getCurio(ItemStack stack) {
