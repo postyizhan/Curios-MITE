@@ -205,17 +205,24 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (owner == null) return;
         processSlots();
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
-            IDynamicStackHandler stacks = entry.getValue().getStacks();
-            for (int i = 0; i < stacks.getSlots(); i++) {
-                ICurio curio = getCurio(stacks.getStackInSlot(i));
-                if (curio != null) {
-                    curio.curioTick(entry.getKey(), i, owner);
-                    if (owner.worldObj.isRemote) curio.curioAnimate(entry.getKey(), i, owner);
-                    else if (curio.canSync(entry.getKey(), i, owner)) {
-                        CuriosNetwork.syncCurioData(owner, entry.getKey(), i, curio.writeSyncData());
-                    }
+            Slots slot = entry.getValue();
+            for (int i = 0; i < slot.getSlots(); i++) {
+                ICurio functional = getCurio(slot.stacks.getStackInSlot(i));
+                if (functional != null) {
+                    functional.curioTick(entry.getKey(), i, owner);
+                    tickCurioData(owner, entry.getKey(), i, functional, false);
                 }
+                ICurio cosmetic = getCurio(slot.cosmetics.getStackInSlot(i));
+                if (cosmetic != null) tickCurioData(owner, entry.getKey(), i, cosmetic, true);
             }
+        }
+    }
+
+    private void tickCurioData(EntityLivingBase owner, String identifier, int index,
+                               ICurio curio, boolean cosmetic) {
+        if (owner.worldObj.isRemote) curio.curioAnimate(identifier, index, owner);
+        else if (curio.canSync(identifier, index, owner)) {
+            CuriosNetwork.syncCurioData(owner, identifier, index, cosmetic, curio.writeSyncData());
         }
     }
 

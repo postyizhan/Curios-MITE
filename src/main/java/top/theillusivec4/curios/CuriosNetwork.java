@@ -75,13 +75,14 @@ public final class CuriosNetwork {
     }
 
     public static void syncCurioData(EntityLivingBase entity, String identifier, int index,
-                                     NBTTagCompound data) {
+                                     boolean cosmetic, NBTTagCompound data) {
         if (entity == null || entity.worldObj.isRemote || data == null) return;
         NBTTagCompound payload = new NBTTagCompound();
         payload.setInteger("Entity", entity.entityId);
         payload.setBoolean("CurioData", true);
         payload.setString("Identifier", identifier);
         payload.setInteger("Index", index);
+        payload.setBoolean("Cosmetic", cosmetic);
         payload.setTag("Data", data);
         Packet250CustomPayload packet;
         try {
@@ -163,10 +164,14 @@ public final class CuriosNetwork {
     }
 
     private static void applyCurioData(NBTTagCompound payload, EntityLivingBase entity) {
-        if (!payload.hasKey("Identifier") || !payload.hasKey("Index") || !payload.hasKey("Data")) return;
+        if (!payload.hasKey("Identifier") || !payload.hasKey("Index")
+            || !payload.hasKey("Cosmetic") || !payload.hasKey("Data")) return;
         String identifier = payload.getString("Identifier");
         int index = payload.getInteger("Index");
-        ItemStack stack = CuriosInventory.get(entity).getEquippedStack(identifier, index);
+        ICurioStacksHandler slot = CuriosInventory.get(entity).getStacksHandler(identifier).orElse(null);
+        if (slot == null || index < 0 || index >= slot.getSlots()) return;
+        boolean cosmetic = payload.getBoolean("Cosmetic");
+        ItemStack stack = (cosmetic ? slot.getCosmeticStacks() : slot.getStacks()).getStackInSlot(index);
         if (stack == null) return;
         top.theillusivec4.curios.api.CuriosApi.getCurio(stack)
             .ifPresent(curio -> curio.readSyncData(payload.getCompoundTag("Data")));
