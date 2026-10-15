@@ -68,7 +68,8 @@ public abstract class FontRendererMixin {
     }
 
     @Redirect(method = "renderStringAtPos(Ljava/lang/String;Z)V",
-              at = @At(value = "ARRAY", opcode = Opcodes.IALOAD), require = 2)
+              at = @At(value = "FIELD", target = "Lnet/minecraft/FontRenderer;charWidth:[I",
+                  opcode = Opcodes.GETFIELD, args = "array=get"), require = 2)
     private int curios$readAllowedCharacterWidth(int[] widths, int index) {
         if (widths == charWidth && (index < 0 || index >= widths.length)) {
             int allowedCharacterIndex = index - 32;
