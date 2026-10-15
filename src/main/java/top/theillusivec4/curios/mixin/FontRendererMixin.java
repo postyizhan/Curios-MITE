@@ -29,7 +29,17 @@ public abstract class FontRendererMixin {
 
     @Inject(method = "getCharWidth(C)I", at = @At("HEAD"), cancellable = true)
     private void curios$measureExtendedCharacters(char character, CallbackInfoReturnable<Integer> cir) {
-        if (unicodeFlag || ChatAllowedCharacters.allowedCharacters.indexOf(character) < charWidth.length - 32) return;
+        if (unicodeFlag) return;
+
+        int allowedCharacterIndex = ChatAllowedCharacters.allowedCharacters.indexOf(character);
+        if (allowedCharacterIndex < charWidth.length - 32) return;
+
+        // MITE's extended allowed-character list is much larger than the base font array.
+        // Resolve its width here so vanilla never indexes charWidth with the extended index.
+        if (character >= glyphWidth.length) {
+            cir.setReturnValue(8);
+            return;
+        }
 
         int packedWidth = glyphWidth[character] & 255;
         if (packedWidth == 0) {
