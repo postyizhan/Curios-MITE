@@ -18,7 +18,6 @@ public final class CuriosRenderHooks {
     private CuriosRenderHooks() {}
 
     public static void render(EntityLivingBase entity, ModelBiped model, float partialTick) {
-        if (model == null) return;
         ICuriosItemHandler handler = CuriosApi.getCuriosHandler(entity).orElse(null);
         if (handler == null) return;
         for (Map.Entry<String, ICurioStacksHandler> entry : handler.getCurios().entrySet()) {
@@ -32,15 +31,14 @@ public final class CuriosRenderHooks {
                 if (stack == null) stack = equipped.getStackInSlot(index);
                 ICurio curio = CuriosApi.getCurio(stack).orElse(null);
                 if (stack == null) continue;
-                ModelRenderer anchor = getAnchor(model, identifier, index);
-                if (anchor == null) continue;
-                ICurioRenderer renderer = CuriosClientApi.getRenderer(stack);
+                ModelRenderer anchor = model == null ? null : getAnchor(model, identifier, index);
+                ICurioRenderer renderer = anchor == null ? null : CuriosClientApi.getRenderer(stack);
                 boolean renderCurio = curio != null && curio.canRender(identifier, index, entity);
                 if (renderer == null && !renderCurio) continue;
 
                 GL11.glPushMatrix();
                 try {
-                    anchor.postRender(0.0625F);
+                    if (anchor != null) anchor.postRender(0.0625F);
                     if (renderer != null) {
                         renderer.render(stack, identifier, index, entity, model, anchor, partialTick);
                     }

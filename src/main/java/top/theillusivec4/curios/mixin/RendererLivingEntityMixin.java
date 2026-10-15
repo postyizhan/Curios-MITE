@@ -16,6 +16,6 @@ public abstract class RendererLivingEntityMixin {
 
     @Inject(method = "renderEquippedItems", at = @At("TAIL"))
     private void curios$renderCurios(EntityLivingBase entity, float partialTick, CallbackInfo info) {
-        if (mainModel instanceof ModelBiped) CuriosRenderHooks.render(entity, (ModelBiped) mainModel, partialTick);
+        CuriosRenderHooks.render(entity, mainModel instanceof ModelBiped ? (ModelBiped) mainModel : null, partialTick);
     }
 }
