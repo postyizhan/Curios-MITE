@@ -57,7 +57,6 @@ public final class CuriosInventory implements ICuriosItemHandler {
             if (current == null) slots.put(identifier, new Slots(identifier, type.getSize(), type.isVisible(), type.hasCosmetic()));
             else {
                 current.resize(Math.max(1, Math.min(256, type.getSize() + current.sizeShift)));
-                current.visible &= type.isVisible();
                 current.cosmetic |= type.hasCosmetic();
             }
         }
