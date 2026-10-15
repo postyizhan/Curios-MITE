@@ -2,10 +2,12 @@ package top.theillusivec4.curios.mixin;
 
 import net.minecraft.ChatAllowedCharacters;
 import net.minecraft.FontRenderer;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(FontRenderer.class)
@@ -14,6 +16,7 @@ public abstract class FontRendererMixin {
     @Shadow private int[] charWidth;
     @Shadow private byte[] glyphWidth;
     @Shadow private boolean unicodeFlag;
+    @Shadow public abstract int getCharWidth(char character);
 
     @Inject(method = "renderDefaultChar(IZ)F", at = @At("HEAD"), cancellable = true)
     private void curios$renderExtendedCharacters(int characterIndex, boolean italic,
@@ -54,5 +57,18 @@ public abstract class FontRendererMixin {
             left = 0;
         }
         cir.setReturnValue((right + 1 - left) / 2 + 1);
+    }
+
+    @Redirect(method = "renderStringAtPos(Ljava/lang/String;Z)V",
+              at = @At(value = "ARRAY", opcode = Opcodes.IALOAD), require = 2)
+    private int curios$readAllowedCharacterWidth(int[] widths, int index) {
+        if (widths == charWidth && (index < 0 || index >= widths.length)) {
+            int allowedCharacterIndex = index - 32;
+            if (allowedCharacterIndex >= 0
+                && allowedCharacterIndex < ChatAllowedCharacters.allowedCharacters.length()) {
+                return getCharWidth(ChatAllowedCharacters.allowedCharacters.charAt(allowedCharacterIndex));
+            }
+        }
+        return widths[index];
     }
 }
