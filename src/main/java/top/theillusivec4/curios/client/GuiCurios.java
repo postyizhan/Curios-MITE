@@ -31,6 +31,7 @@ public final class GuiCurios extends GuiScreen {
     private final RenderItem itemRenderer = new RenderItem();
     private final List<SlotRef> visibleSlots = new ArrayList<SlotRef>();
     private final List<Integer> visibleSources = new ArrayList<Integer>();
+    private ItemStack[] sourceSnapshot;
     private int selectedSource = -1;
     private int slotPage;
     private int sourcePage;
@@ -65,14 +66,36 @@ public final class GuiCurios extends GuiScreen {
     private void rebuildVisibleSources() {
         visibleSources.clear();
         EntityClientPlayerMP player = mc.thePlayer;
-        if (player == null) return;
+        if (player == null) {
+            sourceSnapshot = null;
+            return;
+        }
+        sourceSnapshot = new ItemStack[player.inventory.mainInventory.length];
         for (int index = 0; index < player.inventory.mainInventory.length; index++) {
             ItemStack stack = player.inventory.mainInventory[index];
+            sourceSnapshot[index] = stack == null ? null : stack.copy();
             if (stack != null && (cosmeticMode || CuriosApi.getCurio(stack).isPresent())) {
                 visibleSources.add(index);
             }
         }
+        if (selectedSource >= 0 && !visibleSources.contains(selectedSource)) selectedSource = -1;
         sourcePage = Math.min(sourcePage, Math.max(0, pageCount(visibleSources.size(), getSourcePageSize()) - 1));
+    }
+
+    private void refreshVisibleSourcesIfChanged() {
+        EntityClientPlayerMP player = mc.thePlayer;
+        if (player == null) return;
+        ItemStack[] inventory = player.inventory.mainInventory;
+        if (sourceSnapshot == null || sourceSnapshot.length != inventory.length) {
+            rebuildVisibleSources();
+            return;
+        }
+        for (int index = 0; index < inventory.length; index++) {
+            if (!ItemStack.areItemStacksEqual(inventory[index], sourceSnapshot[index])) {
+                rebuildVisibleSources();
+                return;
+            }
+        }
     }
 
     @Override protected void actionPerformed(GuiButton button) {
@@ -126,6 +149,7 @@ public final class GuiCurios extends GuiScreen {
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
+        refreshVisibleSourcesIfChanged();
         ((GuiButton) buttonList.get(0)).enabled = slotPage > 0;
         ((GuiButton) buttonList.get(1)).enabled = slotPage + 1 < pageCount(visibleSlots.size(), getSlotPageSize());
         ((GuiButton) buttonList.get(4)).enabled = sourcePage > 0;
