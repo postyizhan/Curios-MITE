@@ -609,7 +609,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (previous == stack) return true;
         ICurio previousCurio = getCurio(previous);
         ICurio nextCurio = getCurio(stack);
-        if (stack != null && (nextCurio == null || !CuriosApi.isValidForSlot(stack.getItem(), identifier))) return false;
+        if (stack != null && !CuriosApi.isValidForSlot(stack.getItem(), identifier)) return false;
         if (previousCurio != null && !previousCurio.canUnequip(identifier, owner)) return false;
         return nextCurio == null || nextCurio.canEquip(identifier, owner);
     }

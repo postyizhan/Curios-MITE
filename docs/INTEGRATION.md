@@ -95,6 +95,8 @@ CuriosApi.getCuriosHandler(entity).ifPresent(handler -> {
 
 Use `handler.equip(identifier, index, stack)` and `handler.unequip(identifier, index)` for server-side changes. Each functional slot holds exactly one stack; equipment changes validate slot tags and `canEquip`/`canUnequip`, update attributes, invoke callbacks, and synchronize the entity. Cosmetic stacks are separate from functional stacks and can be set through `rings.getCosmeticStacks().setStackInSlot(index, stack)` on the server.
 
+Cosmetic stacks are display-only and do not need an `ICurio` implementation. Items restricted by Curios tags must still match the target slot. To render a cosmetic item on an entity, register an `ICurioRenderer` for it on the client.
+
 ## Client Rendering
 
 Register renderers from a client-only entrypoint. `ICurioRenderer` is invoked relative to a `ModelBiped` anchor when the entity renderer has one. For entities using other model types, implement `ICurio.canRender` and `ICurio.render` or provide a renderer that does not depend on an anchor.
