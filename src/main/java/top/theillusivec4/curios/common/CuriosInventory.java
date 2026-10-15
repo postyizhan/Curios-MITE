@@ -15,6 +15,7 @@ import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.BaseAttributeMap;
 import net.minecraft.EntityLivingBase;
+import net.minecraft.EntityPlayer;
 import net.minecraft.ItemStack;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.NBTTagList;
@@ -169,6 +170,65 @@ public final class CuriosInventory implements ICuriosItemHandler {
         }
         data.setTag("Locked", savedLocks);
         return data;
+    }
+
+    public void copyForClone(EntityPlayer target, boolean cloneAll) {
+        EntityLivingBase owner = entity.get();
+        if (!(owner instanceof EntityPlayer) || target == null || target == owner || owner.worldObj.isRemote) return;
+        ensureSlotTypes();
+        processSlots();
+
+        Multimap<Attribute, AttributeModifier> sourceModifiers = getAttributeModifiers();
+        CuriosInventory targetInventory = CuriosInventory.get(target);
+        targetInventory.readFromNBT(writeToNBT());
+        Multimap<Attribute, AttributeModifier> targetModifiers = targetInventory.getAttributeModifiers();
+        boolean keepInventory = cloneAll || owner.worldObj.getGameRules()
+            .getGameRuleBooleanValue("keepInventory");
+
+        for (Map.Entry<String, Slots> entry : slots.entrySet()) {
+            Slots sourceSlot = entry.getValue();
+            Slots targetSlot = targetInventory.slots.get(entry.getKey());
+            if (targetSlot == null) continue;
+            for (int index = 0; index < sourceSlot.getSlots(); index++) {
+                ItemStack equipped = sourceSlot.stacks.getStackInSlot(index);
+                boolean retained = transferOnClone((EntityPlayer) owner, targetSlot.stacks,
+                    index, equipped, keepInventory);
+                ICurio curio = getCurio(equipped);
+                if (curio != null) {
+                    curio.onUnequip(entry.getKey(), index, owner);
+                    if (retained) {
+                        ItemStack transferred = targetSlot.stacks.getStackInSlot(index);
+                        ICurio transferredCurio = getCurio(transferred);
+                        if (transferredCurio != null) transferredCurio.onEquip(entry.getKey(), index, target);
+                    }
+                }
+                transferOnClone((EntityPlayer) owner, targetSlot.cosmetics, index,
+                    sourceSlot.cosmetics.getStackInSlot(index), keepInventory);
+            }
+            sourceSlot.stacks.clear();
+            sourceSlot.cosmetics.clear();
+        }
+
+        applyAttributeChanges(sourceModifiers);
+        targetInventory.applyAttributeChanges(targetModifiers);
+        CuriosNetwork.sync(target);
+    }
+
+    private boolean transferOnClone(EntityPlayer owner, StackHandler target, int index,
+                                    ItemStack stack, boolean keepInventory) {
+        if (stack == null) return false;
+        ICurio curio = getCurio(stack);
+        ICurio.DropRule rule = curio == null ? ICurio.DropRule.DEFAULT : curio.getDropRule(owner);
+        if (rule == ICurio.DropRule.DESTROY) {
+            target.setRaw(index, null);
+            return false;
+        } else if (rule == ICurio.DropRule.ALWAYS_DROP
+            || (rule == ICurio.DropRule.DEFAULT && !keepInventory)) {
+            target.setRaw(index, null);
+            owner.dropPlayerItem(stack.copy());
+            return false;
+        }
+        return true;
     }
 
     public void readFromNBT(NBTTagCompound data) {

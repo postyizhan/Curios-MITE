@@ -9,6 +9,8 @@ import net.minecraft.ItemStack;
 
 /** Behaviour attached to an item while it is equipped in a Curios slot. */
 public interface ICurio {
+    enum DropRule { DEFAULT, ALWAYS_DROP, ALWAYS_KEEP, DESTROY }
+
     default ItemStack getStack() { return null; }
     default void onEquip(String identifier, int index, EntityLivingBase entity) {}
     default void onUnequip(String identifier, int index, EntityLivingBase entity) {}
@@ -18,6 +20,7 @@ public interface ICurio {
     default boolean canUnequip(String identifier, EntityLivingBase entity) { return true; }
     default boolean canRender(String identifier, int index, EntityLivingBase entity) { return false; }
     default void render(String identifier, int index, EntityLivingBase entity, float partialTick) {}
+    default DropRule getDropRule(EntityLivingBase entity) { return DropRule.DEFAULT; }
     default Multimap<Attribute, AttributeModifier> getAttributeModifiers(String identifier) {
         return HashMultimap.create();
     }
