@@ -10,6 +10,8 @@ Curios 的 Minecraft 1.6.4 MITE / FishModLoader 移植项目，为 BountifulBaub
 
 旧版 BountifulBaubles Curios API 和当前目录中的现代 Curios 源码（NeoForge 26.x）仅作为功能与行为参考；接口和实现以 MITE/FishModLoader 的最佳适配为准，不承诺旧 API 或既有附属 mod 的兼容性。
 
+新附属 mod 的槽位注册、饰品行为、标签、查询和渲染接入示例见 [Curios-MITE 集成指南](docs/INTEGRATION.md)。
+
 ## 构建
 
 ```bash
