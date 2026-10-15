@@ -63,6 +63,37 @@ public final class GuiCurios extends GuiScreen {
         slotPage = Math.min(slotPage, pageCount(visibleSlots.size(), getSlotPageSize()) - 1);
     }
 
+    private void refreshVisibleSlotsIfChanged() {
+        EntityClientPlayerMP player = mc.thePlayer;
+        ICuriosItemHandler handler = player == null ? null : CuriosApi.getCuriosHandler(player).orElse(null);
+        List<SlotRef> current = new ArrayList<SlotRef>();
+        if (handler != null) {
+            for (ICurioStacksHandler type : handler.getCurios().values()) {
+                if (!type.isVisible() || (cosmeticMode && !type.hasCosmetic())) continue;
+                for (int index = 0; index < type.getSlots(); index++) {
+                    current.add(new SlotRef(type.getIdentifier(), index, type.hasCosmetic()));
+                }
+            }
+        }
+        if (current.size() == visibleSlots.size()) {
+            boolean unchanged = true;
+            for (int index = 0; index < current.size(); index++) {
+                SlotRef oldSlot = visibleSlots.get(index);
+                SlotRef newSlot = current.get(index);
+                if (!oldSlot.identifier.equals(newSlot.identifier) || oldSlot.index != newSlot.index
+                    || oldSlot.hasCosmetic != newSlot.hasCosmetic) {
+                    unchanged = false;
+                    break;
+                }
+            }
+            if (unchanged) return;
+        }
+        visibleSlots.clear();
+        visibleSlots.addAll(current);
+        slotPage = Math.max(0, Math.min(slotPage,
+            pageCount(visibleSlots.size(), getSlotPageSize()) - 1));
+    }
+
     private void rebuildVisibleSources() {
         visibleSources.clear();
         EntityClientPlayerMP player = mc.thePlayer;
@@ -150,6 +181,7 @@ public final class GuiCurios extends GuiScreen {
     @Override public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
         refreshVisibleSourcesIfChanged();
+        refreshVisibleSlotsIfChanged();
         ((GuiButton) buttonList.get(0)).enabled = slotPage > 0;
         ((GuiButton) buttonList.get(1)).enabled = slotPage + 1 < pageCount(visibleSlots.size(), getSlotPageSize());
         ((GuiButton) buttonList.get(4)).enabled = sourcePage > 0;
