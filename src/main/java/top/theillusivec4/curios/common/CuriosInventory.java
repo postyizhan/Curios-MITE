@@ -252,12 +252,21 @@ public final class CuriosInventory implements ICuriosItemHandler {
                                   boolean keepInventory, boolean mobLoot) {
         if (stack == null) return false;
         ICurio.DropRule rule = curio == null ? ICurio.DropRule.DEFAULT : curio.getDropRule(owner);
-        if (rule == null) rule = ICurio.DropRule.DEFAULT;
-        if (rule == ICurio.DropRule.ALWAYS_KEEP
-            || (rule == ICurio.DropRule.DEFAULT && keepInventory)) return false;
-        if (mobLoot && rule != ICurio.DropRule.DESTROY) owner.dropItemStack(stack.copy(), 0.0F);
+        DeathDisposition disposition = getDeathDisposition(rule, keepInventory, mobLoot);
+        if (disposition == DeathDisposition.KEEP) return false;
+        if (disposition == DeathDisposition.DROP) owner.dropItemStack(stack.copy(), 0.0F);
         return true;
     }
+
+    static DeathDisposition getDeathDisposition(ICurio.DropRule rule, boolean keepInventory, boolean mobLoot) {
+        if (rule == null) rule = ICurio.DropRule.DEFAULT;
+        if (rule == ICurio.DropRule.ALWAYS_KEEP
+            || (rule == ICurio.DropRule.DEFAULT && keepInventory)) return DeathDisposition.KEEP;
+        if (rule == ICurio.DropRule.DESTROY || !mobLoot) return DeathDisposition.DESTROY;
+        return DeathDisposition.DROP;
+    }
+
+    enum DeathDisposition { KEEP, DROP, DESTROY }
 
     private int getEnchantmentBonus(boolean fortune) {
         ensureSlotTypes();
