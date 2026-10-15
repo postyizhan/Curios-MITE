@@ -15,10 +15,14 @@ public abstract class FontRendererMixin {
     @Shadow private byte[] glyphWidth;
     @Shadow private boolean unicodeFlag;
 
-    @Inject(method = "renderCharAtPos(ICZ)F", at = @At("HEAD"), cancellable = true)
-    private void curios$renderExtendedCharacters(int characterIndex, char character, boolean italic,
+    @Inject(method = "renderDefaultChar(IZ)F", at = @At("HEAD"), cancellable = true)
+    private void curios$renderExtendedCharacters(int characterIndex, boolean italic,
                                                 CallbackInfoReturnable<Float> cir) {
-        if (!unicodeFlag && characterIndex >= charWidth.length) {
+        int allowedCharacterIndex = characterIndex - 32;
+        if (!unicodeFlag && characterIndex >= charWidth.length
+            && allowedCharacterIndex >= 0
+            && allowedCharacterIndex < ChatAllowedCharacters.allowedCharacters.length()) {
+            char character = ChatAllowedCharacters.allowedCharacters.charAt(allowedCharacterIndex);
             cir.setReturnValue(renderUnicodeChar(character, italic));
         }
     }

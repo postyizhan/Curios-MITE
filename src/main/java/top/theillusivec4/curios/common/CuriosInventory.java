@@ -518,17 +518,31 @@ public final class CuriosInventory implements ICuriosItemHandler {
         }
     }
 
-    public ItemStack setCosmetic(String identifier, int index, ItemStack stack) {
+    private boolean canSetCosmetic(String identifier, int index, ItemStack stack) {
         ensureSlotTypes();
         Slots slot = slot(identifier);
-        if (!slot.cosmetic || !slot.cosmetics.isValidSlot(index)) return null;
+        if (!slot.cosmetic || !slot.cosmetics.isValidSlot(index)) return false;
         EntityLivingBase owner = entity.get();
-        if (owner == null || owner.worldObj.isRemote) return null;
+        if (owner == null || owner.worldObj.isRemote) return false;
         ItemStack previous = slot.cosmetics.getStackInSlot(index);
+        if (previous == stack) return true;
+        ICurio previousCurio = getCurio(previous);
+        ICurio nextCurio = getCurio(stack);
+        if (stack != null && (nextCurio == null || !CuriosApi.isValidForSlot(stack.getItem(), identifier))) return false;
+        if (previousCurio != null && !previousCurio.canUnequip(identifier, owner)) return false;
+        return nextCurio == null || nextCurio.canEquip(identifier, owner);
+    }
+
+    public boolean setCosmetic(String identifier, int index, ItemStack stack) {
+        if (!canSetCosmetic(identifier, index, stack)) return false;
+        Slots slot = slot(identifier);
+        ItemStack previous = slot.cosmetics.getStackInSlot(index);
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote) return false;
         slot.cosmetics.setPreviousStackInSlot(index, previous);
         slot.cosmetics.setRaw(index, stack);
         CuriosNetwork.sync(owner);
-        return previous;
+        return true;
     }
 
     private SlotAddress resolveEquippedSlot(int index) {

@@ -184,9 +184,13 @@ public final class CuriosNetwork {
         java.util.Optional<ICurioStacksHandler> slotHandler = inventory.getStacksHandler(identifier);
         if (!slotHandler.isPresent() || index < 0 || index >= slotHandler.get().getStacks().getSlots()) return;
         if (source == -1) {
-            net.minecraft.ItemStack removed = cosmetic
-                ? inventory.setCosmetic(identifier, index, null)
-                : inventory.unequip(identifier, index);
+            net.minecraft.ItemStack removed;
+            if (cosmetic) {
+                removed = slotHandler.get().getCosmeticStacks().getStackInSlot(index);
+                if (!inventory.setCosmetic(identifier, index, null)) return;
+            } else {
+                removed = inventory.unequip(identifier, index);
+            }
             if (removed != null) {
                 player.inventory.addItemStackToInventoryOrDropIt(removed);
                 player.inventoryContainer.detectAndSendChanges();
@@ -200,7 +204,8 @@ public final class CuriosNetwork {
         equipped.stackSize = 1;
         if (cosmetic) {
             if (!slotHandler.get().hasCosmetic()) return;
-            net.minecraft.ItemStack previous = inventory.setCosmetic(identifier, index, equipped);
+            net.minecraft.ItemStack previous = slotHandler.get().getCosmeticStacks().getStackInSlot(index);
+            if (!inventory.setCosmetic(identifier, index, equipped)) return;
             if (original.stackSize == 1) player.inventory.setInventorySlotContents(source, null);
             else {
                 original.stackSize--;
