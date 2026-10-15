@@ -185,6 +185,9 @@ public final class CuriosInventory implements ICuriosItemHandler {
                 if (curio != null) {
                     curio.curioTick(entry.getKey(), i, owner);
                     if (owner.worldObj.isRemote) curio.curioAnimate(entry.getKey(), i, owner);
+                    else if (curio.canSync(entry.getKey(), i, owner)) {
+                        CuriosNetwork.syncCurioData(owner, entry.getKey(), i, curio.writeSyncData());
+                    }
                 }
             }
         }

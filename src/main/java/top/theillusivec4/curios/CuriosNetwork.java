@@ -2,6 +2,8 @@ package top.theillusivec4.curios;
 
 import com.google.common.eventbus.Subscribe;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.CompressedStreamTools;
 import net.minecraft.Entity;
@@ -19,6 +21,8 @@ import top.theillusivec4.curios.common.CuriosInventory;
 public final class CuriosNetwork {
     public static final String CHANNEL = "Curios|Sync";
     private static final Map<Integer, NBTTagCompound> PENDING = new HashMap<Integer, NBTTagCompound>();
+    private static final Map<Integer, List<NBTTagCompound>> PENDING_CURIO_DATA =
+        new HashMap<Integer, List<NBTTagCompound>>();
 
     @Subscribe
     public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
@@ -70,6 +74,34 @@ public final class CuriosNetwork {
         }
     }
 
+    public static void syncCurioData(EntityLivingBase entity, String identifier, int index,
+                                     NBTTagCompound data) {
+        if (entity == null || entity.worldObj.isRemote || data == null) return;
+        NBTTagCompound payload = new NBTTagCompound();
+        payload.setInteger("Entity", entity.entityId);
+        payload.setBoolean("CurioData", true);
+        payload.setString("Identifier", identifier);
+        payload.setInteger("Index", index);
+        payload.setTag("Data", data);
+        Packet250CustomPayload packet;
+        try {
+            packet = new Packet250CustomPayload(CHANNEL, CompressedStreamTools.compress(payload));
+        } catch (Exception exception) {
+            Curios.LOGGER.error("Failed to synchronize Curios item data for entity {}", entity.entityId, exception);
+            return;
+        }
+        if (entity instanceof ServerPlayer) {
+            ServerPlayer player = (ServerPlayer) entity;
+            if (player.playerNetServerHandler != null) player.playerNetServerHandler.sendPacketToPlayer(packet);
+        }
+        if (entity instanceof ServerPlayer) {
+            WorldServer world = ((ServerPlayer) entity).getServerForPlayer();
+            if (world != null) world.sendPacketToAllPlayersTrackingEntity(entity, packet);
+        } else if (entity.worldObj instanceof WorldServer) {
+            ((WorldServer) entity.worldObj).sendPacketToAllPlayersTrackingEntity(entity, packet);
+        }
+    }
+
     private static Packet250CustomPayload createSnapshot(ServerPlayer player) {
         NBTTagCompound payload = new NBTTagCompound();
         payload.setInteger("Entity", player.entityId);
@@ -102,6 +134,16 @@ public final class CuriosNetwork {
                 .ifPresent(curio -> curio.curioBreak(broken, living));
             return;
         }
+        if (payload.getBoolean("CurioData")) {
+            EntityLivingBase living = entity instanceof EntityLivingBase ? (EntityLivingBase) entity : null;
+            if (living == null) {
+                PENDING_CURIO_DATA.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
+                    .add((NBTTagCompound) payload.copy());
+            } else {
+                applyCurioData(payload, living);
+            }
+            return;
+        }
         if (!payload.hasKey("Inventory")) return;
         PENDING.remove(entityId);
         NBTTagCompound inventory = payload.getCompoundTag("Inventory");
@@ -114,6 +156,20 @@ public final class CuriosNetwork {
         if (!(entity instanceof EntityLivingBase)) return;
         NBTTagCompound inventory = PENDING.remove(entity.entityId);
         if (inventory != null) CuriosInventory.get((EntityLivingBase) entity).readFromNBT(inventory);
+        List<NBTTagCompound> curioData = PENDING_CURIO_DATA.remove(entity.entityId);
+        if (curioData != null) {
+            for (NBTTagCompound payload : curioData) applyCurioData(payload, (EntityLivingBase) entity);
+        }
+    }
+
+    private static void applyCurioData(NBTTagCompound payload, EntityLivingBase entity) {
+        if (!payload.hasKey("Identifier") || !payload.hasKey("Index") || !payload.hasKey("Data")) return;
+        String identifier = payload.getString("Identifier");
+        int index = payload.getInteger("Index");
+        ItemStack stack = CuriosInventory.get(entity).getEquippedStack(identifier, index);
+        if (stack == null) return;
+        top.theillusivec4.curios.api.CuriosApi.getCurio(stack)
+            .ifPresent(curio -> curio.readSyncData(payload.getCompoundTag("Data")));
     }
 
     public static void handleServerAction(byte[] data, ServerPlayer player) {

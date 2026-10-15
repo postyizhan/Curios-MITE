@@ -6,6 +6,7 @@ import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.EntityLivingBase;
 import net.minecraft.ItemStack;
+import net.minecraft.NBTTagCompound;
 
 /** Behaviour attached to an item while it is equipped in a Curios slot. */
 public interface ICurio {
@@ -23,6 +24,9 @@ public interface ICurio {
         entity.playSound("random.pop", 0.2F, 1.0F);
     }
     default void curioBreak(ItemStack stack, EntityLivingBase entity) {}
+    default boolean canSync(String identifier, int index, EntityLivingBase entity) { return false; }
+    default NBTTagCompound writeSyncData() { return new NBTTagCompound(); }
+    default void readSyncData(NBTTagCompound data) {}
     default boolean canRender(String identifier, int index, EntityLivingBase entity) { return false; }
     default void render(String identifier, int index, EntityLivingBase entity, float partialTick) {}
     default DropRule getDropRule(EntityLivingBase entity) { return DropRule.DEFAULT; }
