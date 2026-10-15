@@ -167,6 +167,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         slot.stacks.setRaw(index, null);
         applyAttributeChanges(previousModifiers);
         if (curio != null) curio.onUnequip(identifier, index, owner);
+        slot.stacks.setPreviousStackInSlot(index, null);
         CuriosNetwork.sync(owner);
     }
 
@@ -239,13 +240,40 @@ public final class CuriosInventory implements ICuriosItemHandler {
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             Slots slot = entry.getValue();
             for (int i = 0; i < slot.getSlots(); i++) {
-                ICurio functional = getCurio(slot.stacks.getStackInSlot(i));
+                ItemStack stack = slot.stacks.getStackInSlot(i);
+                if (!owner.worldObj.isRemote) processEquipChange(slot, i, stack, owner);
+                stack = slot.stacks.getStackInSlot(i);
+                ICurio functional = getCurio(stack);
                 if (functional != null) {
                     functional.curioTick(entry.getKey(), i, owner);
                     tickCurioData(owner, entry.getKey(), i, functional, false);
                 }
                 ICurio cosmetic = getCurio(slot.cosmetics.getStackInSlot(i));
                 if (cosmetic != null) tickCurioData(owner, entry.getKey(), i, cosmetic, true);
+            }
+        }
+    }
+
+    private void processEquipChange(Slots slot, int index, ItemStack current, EntityLivingBase owner) {
+        ItemStack previous = slot.stacks.getPreviousStackInSlot(index);
+        if (ItemStack.areItemStacksEqual(current, previous)) return;
+
+        boolean sameItem = current != null && previous != null
+            && current.getItem() == previous.getItem();
+        if (!sameItem) {
+            ICurio previousCurio = getCurio(previous);
+            ICurio currentCurio = getCurio(current);
+            if (previousCurio != null) previousCurio.onUnequip(slot.id, index, owner);
+            if (currentCurio != null) currentCurio.onEquip(slot.id, index, owner);
+        }
+        slot.stacks.setPreviousStackInSlot(index, slot.stacks.getStackInSlot(index));
+    }
+
+    private void markCurrentStacksAsPrevious() {
+        for (Slots slot : slots.values()) {
+            for (int index = 0; index < slot.getSlots(); index++) {
+                slot.stacks.setPreviousStackInSlot(index, slot.stacks.getStackInSlot(index));
+                slot.cosmetics.setPreviousStackInSlot(index, slot.cosmetics.getStackInSlot(index));
             }
         }
     }
@@ -347,6 +375,8 @@ public final class CuriosInventory implements ICuriosItemHandler {
         applyAttributeChanges(sourceModifiers);
         targetInventory.applyAttributeChanges(targetModifiers);
         for (Runnable callback : cloneCallbacks) callback.run();
+        markCurrentStacksAsPrevious();
+        targetInventory.markCurrentStacksAsPrevious();
         CuriosNetwork.sync(target);
     }
 
@@ -470,6 +500,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         applyAttributeChanges(previousModifiers);
         if (previousCurio != null) previousCurio.onUnequip(identifier, index, owner);
         if (nextCurio != null) nextCurio.onEquip(identifier, index, owner);
+        stacks.setPreviousStackInSlot(index, stacks.getStackInSlot(index));
         CuriosNetwork.sync(owner);
         return true;
     }
