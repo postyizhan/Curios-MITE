@@ -162,6 +162,21 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (curio != null) curio.onUnequip(identifier, index, owner);
         CuriosNetwork.sync(owner);
     }
+
+    public void onBrokenCurio(ItemStack broken) {
+        if (broken == null) return;
+        ensureSlotTypes();
+        for (Map.Entry<String, Slots> entry : slots.entrySet()) {
+            StackHandler stacks = entry.getValue().stacks;
+            for (int index = 0; index < stacks.getSlots(); index++) {
+                if (stacks.getStackInSlot(index) == broken) {
+                    onBrokenCurio(entry.getKey(), index);
+                    return;
+                }
+            }
+        }
+    }
+
     @Override public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
         ensureSlotTypes();
         Multimap<Attribute, AttributeModifier> modifiers = HashMultimap.create();
