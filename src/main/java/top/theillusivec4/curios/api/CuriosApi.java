@@ -21,6 +21,7 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
+import top.theillusivec4.curios.common.CuriosTagLoader;
 import top.theillusivec4.curios.common.CuriosSlotRegistry;
 import top.theillusivec4.curios.common.CuriosInventory;
 
@@ -30,6 +31,10 @@ public final class CuriosApi {
         Collections.synchronizedMap(new IdentityHashMap<Item, Function<ItemStack, ICurio>>());
     private static final Map<Item, Set<String>> CURIO_TAGS =
         Collections.synchronizedMap(new IdentityHashMap<Item, Set<String>>());
+    private static final Map<Item, Set<String>> LOADED_CURIO_TAGS =
+        Collections.synchronizedMap(new IdentityHashMap<Item, Set<String>>());
+    private static final Map<Item, String> ITEM_IDENTIFIERS =
+        Collections.synchronizedMap(new IdentityHashMap<Item, String>());
     private static final ICuriosHelper HELPER = new ICuriosHelper() {
         @Override public Optional<ICurio> getCurio(ItemStack stack) { return CuriosApi.getCurio(stack); }
 
@@ -44,10 +49,14 @@ public final class CuriosApi {
 
         @Override public Set<String> getCurioTags(Item item) {
             if (item == null) return Collections.emptySet();
+            CuriosTagLoader.loadIfNeeded();
             synchronized (CURIO_TAGS) {
-                Set<String> tags = CURIO_TAGS.get(item);
-                return tags == null ? Collections.emptySet()
-                    : Collections.unmodifiableSet(new LinkedHashSet<String>(tags));
+                Set<String> result = new LinkedHashSet<String>();
+                Set<String> registered = CURIO_TAGS.get(item);
+                Set<String> loaded = LOADED_CURIO_TAGS.get(item);
+                if (registered != null) result.addAll(registered);
+                if (loaded != null) result.addAll(loaded);
+                return Collections.unmodifiableSet(result);
             }
         }
 
@@ -96,6 +105,30 @@ public final class CuriosApi {
         }
         synchronized (CURIO_TAGS) {
             CURIO_TAGS.computeIfAbsent(item, ignored -> new LinkedHashSet<String>()).add(identifier);
+        }
+    }
+
+    public static void reloadCurioTags() {
+        CuriosTagLoader.reload();
+    }
+
+    public static void registerItemIdentifier(Item item, String namespace, String path) {
+        if (item == null || namespace == null || path == null || namespace.isEmpty() || path.isEmpty()) return;
+        if (path.startsWith("item.")) path = path.substring("item.".length());
+        ITEM_IDENTIFIERS.put(item, namespace.toLowerCase(java.util.Locale.ROOT) + ":"
+            + path.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    public static String getItemIdentifier(Item item) {
+        return ITEM_IDENTIFIERS.get(item);
+    }
+
+    public static void replaceLoadedCurioTags(Map<Item, Set<String>> tags) {
+        synchronized (CURIO_TAGS) {
+            LOADED_CURIO_TAGS.clear();
+            for (Map.Entry<Item, Set<String>> entry : tags.entrySet()) {
+                LOADED_CURIO_TAGS.put(entry.getKey(), new LinkedHashSet<String>(entry.getValue()));
+            }
         }
     }
 
