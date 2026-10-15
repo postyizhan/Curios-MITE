@@ -600,11 +600,13 @@ public final class CuriosInventory implements ICuriosItemHandler {
         }
         @Override public void grow(int amount) {
             if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
-            resize(values.length + amount);
+            if (amount == 0) return;
+            CuriosInventory.this.growSlotType(identifier, amount);
         }
         @Override public void shrink(int amount) {
             if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
-            resize(Math.max(0, values.length - amount));
+            if (amount == 0) return;
+            CuriosInventory.this.shrinkSlotType(identifier, amount);
         }
         @Override public void setStackInSlot(int slot, ItemStack stack) {
             if (!isValidSlot(slot)) throw new IndexOutOfBoundsException("Curios slot index: " + slot);
