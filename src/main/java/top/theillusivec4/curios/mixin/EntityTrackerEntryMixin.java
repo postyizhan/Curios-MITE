@@ -15,7 +15,12 @@ import top.theillusivec4.curios.CuriosNetwork;
 public abstract class EntityTrackerEntryMixin {
     @Shadow public Entity myEntity;
 
-    @Inject(method = "tryStartWachingThis", at = @At("TAIL"))
+    @Inject(method = "tryStartWachingThis", at = @At(
+        value = "INVOKE",
+        target = "Lnet/minecraft/NetServerHandler;sendPacketToPlayer(Lnet/minecraft/Packet;)V",
+        ordinal = 0,
+        shift = At.Shift.AFTER
+    ))
     private void curios$syncLivingEntityToNewObserver(ServerPlayer observer, CallbackInfo info) {
         if (myEntity instanceof EntityLivingBase) {
             CuriosNetwork.syncTo((EntityLivingBase) myEntity, observer);
