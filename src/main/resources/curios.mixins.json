@@ -4,6 +4,6 @@
   "compatibilityLevel": "JAVA_17",
   "target": "DEFAULT",
   "mixins": ["EntityLivingBaseMixin", "EntityTrackerEntryMixin", "NetServerHandlerMixin"],
-  "client": ["NetClientHandlerMixin", "GuiInventoryMixin", "FontRendererMixin"],
+  "client": ["NetClientHandlerMixin", "GuiInventoryMixin", "FontRendererMixin", "RenderPlayerMixin", "RendererLivingEntityMixin"],
   "injectors": { "defaultRequire": 1 }
 }
