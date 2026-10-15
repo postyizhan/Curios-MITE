@@ -60,7 +60,7 @@ public final class ExampleCharm extends Item implements ICurioItem {
 
 ## Restrict Slot Types
 
-Items registered to a MITE item identifier can be selected by item tag files. Put files under `data/curios/tags/items/`; a top-level file name is its slot identifier. For example, `data/curios/tags/items/example:ring.json` can contain:
+Items registered to a MITE item identifier can be selected by item tag files. Put files under `data/curios/tags/items/`; a top-level file name is an unnamespaced slot identifier. For a namespaced slot such as `example:ring`, use `data/curios/tags/items/example/ring.json`:
 
 ```json
 {

@@ -149,8 +149,12 @@ public final class CuriosTagLoader {
     private static Set<String> identifiersForTag(String tag) {
         if (!tag.startsWith("curios:")) return Collections.emptySet();
         String identifier = tag.substring("curios:".length());
-        if (identifier.indexOf('/') >= 0) return Collections.emptySet();
-        return Collections.singleton(identifier);
+        int separator = identifier.indexOf('/');
+        if (separator < 0) return Collections.singleton(identifier);
+        String namespace = identifier.substring(0, separator);
+        String path = identifier.substring(separator + 1);
+        if (namespace.isEmpty() || path.isEmpty()) return Collections.emptySet();
+        return Collections.singleton(namespace + ":" + path);
     }
 
     private static String normalizeTagId(String id) {
