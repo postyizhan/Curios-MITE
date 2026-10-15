@@ -480,7 +480,10 @@ public final class CuriosInventory implements ICuriosItemHandler {
         pendingLocks.clear();
         for (UnlockState unlock : pendingUnlocks) {
             if (slots.containsKey(unlock.identifier)) continue;
-            slots.put(unlock.identifier, new Slots(unlock.identifier, unlock.amount, unlock.visible, unlock.cosmetic));
+            Slots unlocked = new Slots(unlock.identifier, unlock.amount, unlock.visible, unlock.cosmetic);
+            int registeredSize = CuriosSlotRegistry.get(unlock.identifier).map(ISlotType::getSize).orElse(1);
+            unlocked.sizeShift = unlock.amount - registeredSize;
+            slots.put(unlock.identifier, unlocked);
             lockedSlots.remove(unlock.identifier);
             initializedSlots.add(unlock.identifier);
             changed = true;
