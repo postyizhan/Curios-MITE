@@ -32,7 +32,7 @@ public final class CuriosRenderHooks {
                 ICurio curio = CuriosApi.getCurio(stack).orElse(null);
                 if (stack == null) continue;
                 ModelRenderer anchor = model == null ? null : getAnchor(model, identifier, index);
-                ICurioRenderer renderer = anchor == null ? null : CuriosClientApi.getRenderer(stack);
+                ICurioRenderer renderer = CuriosClientApi.getRenderer(stack);
                 boolean renderCurio = curio != null && curio.canRender(identifier, index, entity);
                 if (renderer == null && !renderCurio) continue;
 
