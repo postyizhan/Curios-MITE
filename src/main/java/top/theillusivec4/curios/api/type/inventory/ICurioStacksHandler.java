@@ -7,6 +7,7 @@ public interface ICurioStacksHandler {
     IDynamicStackHandler getStacks();
     IDynamicStackHandler getCosmeticStacks();
     List<Boolean> getRenders();
+    void setRender(int slot, boolean render);
     int getSlots();
     int getSizeShift();
     boolean isVisible();

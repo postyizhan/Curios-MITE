@@ -746,7 +746,17 @@ public final class CuriosInventory implements ICuriosItemHandler {
             for (int index = 0; index < size; index++) {
                 if (renders.get(index) == null) renders.set(index, Boolean.TRUE);
             }
-            return renders;
+            return Collections.unmodifiableList(renders);
+        }
+        @Override public void setRender(int index, boolean render) {
+            if (index < 0 || index >= stacks.getSlots()) {
+                throw new IndexOutOfBoundsException("Curios slot index: " + index);
+            }
+            EntityLivingBase owner = entity.get();
+            if (owner == null || owner.worldObj.isRemote) return;
+            if (renders.get(index) == render) return;
+            renders.set(index, render);
+            CuriosNetwork.sync(owner);
         }
         @Override public int getSlots() { return stacks.getSlots(); }
         @Override public int getSizeShift() { return sizeShift; }
