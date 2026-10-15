@@ -115,34 +115,29 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (curio == null || !curio.canRightClickEquip()) return false;
 
         ensureSlotTypes();
-        String targetIdentifier = null;
-        int targetIndex = -1;
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             StackHandler stacks = entry.getValue().stacks;
-            if (!CuriosApi.isValidForSlot(heldStack.getItem(), entry.getKey())
-                || !curio.canEquip(entry.getKey(), player)) continue;
+            if (!CuriosApi.isValidForSlot(heldStack.getItem(), entry.getKey())) continue;
             for (int index = 0; index < stacks.getSlots(); index++) {
-                if (stacks.getStackInSlot(index) == null) {
-                    targetIdentifier = entry.getKey();
-                    targetIndex = index;
-                    break;
+                if (stacks.getStackInSlot(index) != null) continue;
+                if (player.worldObj.isRemote) {
+                    if (curio.canEquip(entry.getKey(), player)) return true;
+                    continue;
                 }
+
+                ItemStack equipped = heldStack.copy();
+                equipped.stackSize = 1;
+                if (!equip(entry.getKey(), index, equipped)) continue;
+
+                int inventoryIndex = player.inventory.currentItem;
+                heldStack.stackSize--;
+                player.inventory.setInventorySlotContents(inventoryIndex, heldStack.stackSize > 0 ? heldStack : null);
+                player.inventoryContainer.detectAndSendChanges();
+                curio.playRightClickEquipSound(player);
+                return true;
             }
-            if (targetIdentifier != null) break;
         }
-        if (targetIdentifier == null) return false;
-        if (player.worldObj.isRemote) return true;
-
-        ItemStack equipped = heldStack.copy();
-        equipped.stackSize = 1;
-        if (!equip(targetIdentifier, targetIndex, equipped)) return false;
-
-        int inventoryIndex = player.inventory.currentItem;
-        heldStack.stackSize--;
-        player.inventory.setInventorySlotContents(inventoryIndex, heldStack.stackSize > 0 ? heldStack : null);
-        player.inventoryContainer.detectAndSendChanges();
-        curio.playRightClickEquipSound(player);
-        return true;
+        return false;
     }
 
     @Override public ItemStack unequip(String identifier, int index) {
