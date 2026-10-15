@@ -292,6 +292,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         Multimap<Attribute, AttributeModifier> targetModifiers = targetInventory.getAttributeModifiers();
         boolean keepInventory = cloneAll || owner.worldObj.getGameRules()
             .getGameRuleBooleanValue("keepInventory");
+        List<Runnable> cloneCallbacks = new ArrayList<Runnable>();
 
         for (Map.Entry<String, Slots> entry : slots.entrySet()) {
             Slots sourceSlot = entry.getValue();
@@ -303,11 +304,15 @@ public final class CuriosInventory implements ICuriosItemHandler {
                     index, equipped, keepInventory);
                 ICurio curio = getCurio(equipped);
                 if (curio != null) {
-                    curio.onUnequip(entry.getKey(), index, owner);
+                    final String identifier = entry.getKey();
+                    final int slotIndex = index;
+                    cloneCallbacks.add(() -> curio.onUnequip(identifier, slotIndex, owner));
                     if (retained) {
                         ItemStack transferred = targetSlot.stacks.getStackInSlot(index);
                         ICurio transferredCurio = getCurio(transferred);
-                        if (transferredCurio != null) transferredCurio.onEquip(entry.getKey(), index, target);
+                        if (transferredCurio != null) {
+                            cloneCallbacks.add(() -> transferredCurio.onEquip(identifier, slotIndex, target));
+                        }
                     }
                 }
                 transferOnClone((EntityPlayer) owner, targetSlot.cosmetics, index,
@@ -319,6 +324,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
         applyAttributeChanges(sourceModifiers);
         targetInventory.applyAttributeChanges(targetModifiers);
+        for (Runnable callback : cloneCallbacks) callback.run();
         CuriosNetwork.sync(target);
     }
 
