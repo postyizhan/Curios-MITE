@@ -127,7 +127,10 @@ public final class CuriosInventory implements ICuriosItemHandler {
             IDynamicStackHandler stacks = entry.getValue().getStacks();
             for (int i = 0; i < stacks.getSlots(); i++) {
                 ICurio curio = getCurio(stacks.getStackInSlot(i));
-                if (curio != null) curio.curioTick(entry.getKey(), i, owner);
+                if (curio != null) {
+                    curio.curioTick(entry.getKey(), i, owner);
+                    if (owner.worldObj.isRemote) curio.curioAnimate(entry.getKey(), i, owner);
+                }
             }
         }
     }
