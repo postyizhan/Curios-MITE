@@ -1,10 +1,11 @@
 package top.theillusivec4.curios.api;
 
-import java.util.Optional;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.Attribute;
@@ -15,9 +16,10 @@ import net.minecraft.ItemStack;
 import top.theillusivec4.curios.api.type.ISlotType;
 import top.theillusivec4.curios.api.type.capability.ICurio;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
+import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import top.theillusivec4.curios.common.CuriosSlotRegistry;
-import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.common.CuriosInventory;
 
 /** Stable access point for mods such as BountifulBaubles. */
@@ -34,6 +36,25 @@ public final class CuriosApi {
         @Override public Optional<IDynamicStackHandler> getEquippedCurios(EntityLivingBase entity) {
             return entity == null ? Optional.<IDynamicStackHandler>empty()
                 : Optional.<IDynamicStackHandler>of(CuriosInventory.get(entity).getEquippedCurios());
+        }
+
+        @Override public Optional<EquippedCurio> findEquippedCurio(Predicate<ItemStack> predicate,
+                                                                    EntityLivingBase entity) {
+            if (predicate == null || entity == null) return Optional.empty();
+            for (Map.Entry<String, ICurioStacksHandler> entry : CuriosInventory.get(entity).getCurios().entrySet()) {
+                IDynamicStackHandler stacks = entry.getValue().getStacks();
+                for (int index = 0; index < stacks.getSlots(); index++) {
+                    ItemStack stack = stacks.getStackInSlot(index);
+                    if (stack != null && predicate.test(stack)) {
+                        return Optional.of(new EquippedCurio(entry.getKey(), index, stack));
+                    }
+                }
+            }
+            return Optional.empty();
+        }
+
+        @Override public void onBrokenCurio(String identifier, int index, EntityLivingBase entity) {
+            if (entity != null) CuriosInventory.get(entity).onBrokenCurio(identifier, index);
         }
 
         @Override public Multimap<Attribute, AttributeModifier> getAttributeModifiers(String identifier, ItemStack stack) {

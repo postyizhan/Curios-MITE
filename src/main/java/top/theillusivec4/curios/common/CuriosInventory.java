@@ -107,6 +107,22 @@ public final class CuriosInventory implements ICuriosItemHandler {
         ItemStack old = stacks.getStackInSlot(index);
         return replace(identifier, index, null) ? old : null;
     }
+
+    public void onBrokenCurio(String identifier, int index) {
+        ensureSlotTypes();
+        Slots slot = slots.get(identifier);
+        EntityLivingBase owner = entity.get();
+        if (slot == null || owner == null || owner.worldObj.isRemote || !slot.stacks.isValidSlot(index)) return;
+
+        ItemStack broken = slot.stacks.getStackInSlot(index);
+        if (broken == null) return;
+        Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        ICurio curio = getCurio(broken);
+        slot.stacks.setRaw(index, null);
+        applyAttributeChanges(previousModifiers);
+        if (curio != null) curio.onUnequip(identifier, index, owner);
+        CuriosNetwork.sync(owner);
+    }
     @Override public Multimap<Attribute, AttributeModifier> getAttributeModifiers() {
         ensureSlotTypes();
         Multimap<Attribute, AttributeModifier> modifiers = HashMultimap.create();
