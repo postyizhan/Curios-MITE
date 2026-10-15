@@ -95,7 +95,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     @Override public boolean equip(String identifier, int index, ItemStack stack) {
         ensureSlotTypes();
-        if (stack == null) return false;
+        if (stack == null || stack.stackSize != 1) return false;
         StackHandler stacks = slot(identifier).stacks;
         if (!stacks.isValidSlot(index) || stacks.getStackInSlot(index) != null) return false;
         return replace(identifier, index, stack);
@@ -415,6 +415,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
     private boolean replace(String identifier, int index, ItemStack stack) {
         StackHandler stacks = slot(identifier).stacks;
         if (!stacks.isValidSlot(index)) return false;
+        if (stack != null && stack.stackSize != 1) return false;
         ItemStack previousStack = stacks.getStackInSlot(index);
         if (previousStack == stack) return true;
         EntityLivingBase owner = entity.get();
@@ -534,6 +535,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         ensureSlotTypes();
         Slots slot = slot(identifier);
         if (!slot.cosmetic || !slot.cosmetics.isValidSlot(index)) return false;
+        if (stack != null && stack.stackSize != 1) return false;
         EntityLivingBase owner = entity.get();
         if (owner == null || owner.worldObj.isRemote) return false;
         ItemStack previous = slot.cosmetics.getStackInSlot(index);
