@@ -53,7 +53,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
             Slots current = slots.get(type.getIdentifier());
             if (current == null) slots.put(identifier, new Slots(identifier, type.getSize(), type.isVisible(), type.hasCosmetic()));
             else {
-                current.resize(Math.max(1, type.getSize() + current.sizeShift));
+                current.resize(Math.max(1, Math.min(256, type.getSize() + current.sizeShift)));
                 current.visible &= type.isVisible();
                 current.cosmetic |= type.hasCosmetic();
             }
@@ -315,18 +315,25 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     @Override public void growSlotType(String identifier, int amount) {
         if (amount <= 0) return;
+        ensureSlotTypes();
         EntityLivingBase owner = entity.get();
         if (owner == null || owner.worldObj.isRemote) return;
         Slots slot = slots.get(identifier);
-        if (slot != null) slot.grow(amount);
-        if (slot != null) CuriosNetwork.sync(owner);
+        if (slot == null) return;
+        if (amount > 256 - slot.getSlots()) {
+            throw new IllegalArgumentException("Curios slot size cannot exceed 256: " + identifier);
+        }
+        slot.grow(amount);
+        CuriosNetwork.sync(owner);
     }
 
     @Override public void shrinkSlotType(String identifier, int amount) {
         if (amount <= 0) return;
-        Slots slot = slots.get(identifier);
+        ensureSlotTypes();
         EntityLivingBase owner = entity.get();
-        if (slot == null || owner == null) return;
+        if (owner == null || owner.worldObj.isRemote) return;
+        Slots slot = slots.get(identifier);
+        if (slot == null) return;
         int shrink = Math.min(amount, slot.getSlots() - 1);
         if (shrink == 0) return;
         Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
@@ -338,7 +345,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         }
         slot.shrink(shrink);
         applyAttributeChanges(previousModifiers);
-        if (!owner.worldObj.isRemote) CuriosNetwork.sync(owner);
+        CuriosNetwork.sync(owner);
     }
 
     private void returnStack(EntityLivingBase owner, ItemStack stack) {
