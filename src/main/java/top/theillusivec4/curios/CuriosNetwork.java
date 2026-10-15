@@ -32,6 +32,12 @@ public final class CuriosNetwork {
         PENDING_BREAK_EVENTS.clear();
     }
 
+    public static synchronized void clearPending(int entityId) {
+        PENDING.remove(entityId);
+        PENDING_CURIO_DATA.remove(entityId);
+        PENDING_BREAK_EVENTS.remove(entityId);
+    }
+
     @Subscribe
     public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
         sync(event.getPlayer());
