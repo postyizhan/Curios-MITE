@@ -26,7 +26,7 @@ public final class CuriosNetwork {
     private static final Map<Integer, List<NBTTagCompound>> PENDING_BREAK_EVENTS =
         new HashMap<Integer, List<NBTTagCompound>>();
 
-    public static void clearPending() {
+    public static synchronized void clearPending() {
         PENDING.clear();
         PENDING_CURIO_DATA.clear();
         PENDING_BREAK_EVENTS.clear();
@@ -135,38 +135,26 @@ public final class CuriosNetwork {
         }
     }
 
-    public static void receive(NBTTagCompound payload, Entity entity) {
+    public static synchronized void receive(NBTTagCompound payload, Entity entity) {
         if (payload == null || !payload.hasKey("Entity")) return;
         int entityId = payload.getInteger("Entity");
+        // Packet handlers may run off the client tick thread; apply all entity state in applyPending.
         if (payload.getBoolean("Break")) {
             if (!payload.hasKey("Stack")) return;
-            if (!(entity instanceof EntityLivingBase)) {
-                PENDING_BREAK_EVENTS.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
-                    .add((NBTTagCompound) payload.copy());
-            } else {
-                applyBreakEvent(payload, (EntityLivingBase) entity);
-            }
+            PENDING_BREAK_EVENTS.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
+                .add((NBTTagCompound) payload.copy());
             return;
         }
         if (payload.getBoolean("CurioData")) {
-            EntityLivingBase living = entity instanceof EntityLivingBase ? (EntityLivingBase) entity : null;
-            if (living == null) {
-                PENDING_CURIO_DATA.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
-                    .add((NBTTagCompound) payload.copy());
-            } else {
-                applyCurioData(payload, living);
-            }
+            PENDING_CURIO_DATA.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
+                .add((NBTTagCompound) payload.copy());
             return;
         }
         if (!payload.hasKey("Inventory")) return;
-        PENDING.remove(entityId);
-        NBTTagCompound inventory = payload.getCompoundTag("Inventory");
-        EntityLivingBase living = entity instanceof EntityLivingBase ? (EntityLivingBase) entity : null;
-        if (living == null) PENDING.put(entityId, inventory);
-        else CuriosInventory.get(living).readFromNBT(inventory);
+        PENDING.put(entityId, (NBTTagCompound) payload.getCompoundTag("Inventory").copy());
     }
 
-    public static void applyPending(Entity entity) {
+    public static synchronized void applyPending(Entity entity) {
         if (!(entity instanceof EntityLivingBase)) return;
         NBTTagCompound inventory = PENDING.remove(entity.entityId);
         if (inventory != null) CuriosInventory.get((EntityLivingBase) entity).readFromNBT(inventory);
