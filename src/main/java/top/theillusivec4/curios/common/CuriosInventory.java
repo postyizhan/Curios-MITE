@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import net.minecraft.Attribute;
 import net.minecraft.AttributeModifier;
 import net.minecraft.BaseAttributeMap;
@@ -168,7 +170,16 @@ public final class CuriosInventory implements ICuriosItemHandler {
             IDynamicStackHandler stacks = entry.getValue().getStacks();
             for (int i = 0; i < stacks.getSlots(); i++) {
                 ICurio curio = getCurio(stacks.getStackInSlot(i));
-                if (curio != null) modifiers.putAll(curio.getAttributeModifiers(entry.getKey()));
+                if (curio == null) continue;
+                Multimap<Attribute, AttributeModifier> curioModifiers = curio.getAttributeModifiers(entry.getKey());
+                for (Map.Entry<Attribute, AttributeModifier> modifierEntry : curioModifiers.entries()) {
+                    AttributeModifier modifier = modifierEntry.getValue();
+                    UUID id = UUID.nameUUIDFromBytes((entry.getKey() + ":" + i + ":" + modifier.getID())
+                        .getBytes(StandardCharsets.UTF_8));
+                    AttributeModifier slotModifier = new AttributeModifier(id, modifier.getName(),
+                        modifier.getAmount(), modifier.getOperation()).setSaved(modifier.isSaved());
+                    modifiers.put(modifierEntry.getKey(), slotModifier);
+                }
             }
         }
         return modifiers;
