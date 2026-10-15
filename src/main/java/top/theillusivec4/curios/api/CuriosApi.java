@@ -38,6 +38,11 @@ public final class CuriosApi {
                 : Optional.<IDynamicStackHandler>of(CuriosInventory.get(entity).getEquippedCurios());
         }
 
+        @Override public Optional<EquippedCurio> findEquippedCurio(Item item, EntityLivingBase entity) {
+            return item == null ? Optional.empty()
+                : findEquippedCurio(stack -> stack.getItem() == item, entity);
+        }
+
         @Override public Optional<EquippedCurio> findEquippedCurio(Predicate<ItemStack> predicate,
                                                                     EntityLivingBase entity) {
             if (predicate == null || entity == null) return Optional.empty();
