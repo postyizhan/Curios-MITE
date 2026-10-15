@@ -1,8 +1,9 @@
 package top.theillusivec4.curios;
 
 import com.google.common.eventbus.Subscribe;
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.CompressedStreamTools;
@@ -20,22 +21,29 @@ import top.theillusivec4.curios.common.CuriosInventory;
 /** Server-authoritative synchronization for Curios inventories. */
 public final class CuriosNetwork {
     public static final String CHANNEL = "Curios|Sync";
-    private static final Map<Integer, NBTTagCompound> PENDING = new HashMap<Integer, NBTTagCompound>();
+    private static final int MAX_PENDING_ENTITIES = 512;
+    private static final int MAX_PENDING_CURIO_DATA_PER_ENTITY = 256;
+    private static final int MAX_PENDING_BREAK_EVENTS_PER_ENTITY = 64;
+    private static final long PENDING_EXPIRY_NANOS = 60_000_000_000L;
+    private static final Map<Integer, NBTTagCompound> PENDING = new LinkedHashMap<Integer, NBTTagCompound>();
     private static final Map<Integer, List<NBTTagCompound>> PENDING_CURIO_DATA =
-        new HashMap<Integer, List<NBTTagCompound>>();
+        new LinkedHashMap<Integer, List<NBTTagCompound>>();
     private static final Map<Integer, List<NBTTagCompound>> PENDING_BREAK_EVENTS =
-        new HashMap<Integer, List<NBTTagCompound>>();
+        new LinkedHashMap<Integer, List<NBTTagCompound>>();
+    private static final Map<Integer, Long> PENDING_SINCE = new LinkedHashMap<Integer, Long>();
 
     public static synchronized void clearPending() {
         PENDING.clear();
         PENDING_CURIO_DATA.clear();
         PENDING_BREAK_EVENTS.clear();
+        PENDING_SINCE.clear();
     }
 
     public static synchronized void clearPending(int entityId) {
         PENDING.remove(entityId);
         PENDING_CURIO_DATA.remove(entityId);
         PENDING_BREAK_EVENTS.remove(entityId);
+        PENDING_SINCE.remove(entityId);
     }
 
     @Subscribe
@@ -142,25 +150,44 @@ public final class CuriosNetwork {
     }
 
     public static synchronized void receive(NBTTagCompound payload, Entity entity) {
+        expirePending();
         if (payload == null || !payload.hasKey("Entity")) return;
         int entityId = payload.getInteger("Entity");
         // Packet handlers may run off the client tick thread; apply all entity state in applyPending.
         if (payload.getBoolean("Break")) {
             if (!payload.hasKey("Stack")) return;
-            PENDING_BREAK_EVENTS.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
-                .add((NBTTagCompound) payload.copy());
+            List<NBTTagCompound> events = pendingEvents(entityId);
+            if (events.size() == MAX_PENDING_BREAK_EVENTS_PER_ENTITY) events.remove(0);
+            events.add((NBTTagCompound) payload.copy());
             return;
         }
         if (payload.getBoolean("CurioData")) {
-            PENDING_CURIO_DATA.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>())
-                .add((NBTTagCompound) payload.copy());
+            if (!payload.hasKey("Identifier") || !payload.hasKey("Index")
+                || !payload.hasKey("Cosmetic") || !payload.hasKey("Data")) return;
+            List<NBTTagCompound> data = pendingCurioData(entityId);
+            String identifier = payload.getString("Identifier");
+            int index = payload.getInteger("Index");
+            boolean cosmetic = payload.getBoolean("Cosmetic");
+            for (Iterator<NBTTagCompound> iterator = data.iterator(); iterator.hasNext();) {
+                NBTTagCompound previous = iterator.next();
+                if (previous.getString("Identifier").equals(identifier)
+                    && previous.getInteger("Index") == index
+                    && previous.getBoolean("Cosmetic") == cosmetic) {
+                    iterator.remove();
+                    break;
+                }
+            }
+            if (data.size() == MAX_PENDING_CURIO_DATA_PER_ENTITY) data.remove(0);
+            data.add((NBTTagCompound) payload.copy());
             return;
         }
         if (!payload.hasKey("Inventory")) return;
+        trackPendingEntity(entityId);
         PENDING.put(entityId, (NBTTagCompound) payload.getCompoundTag("Inventory").copy());
     }
 
     public static synchronized void applyPending(Entity entity) {
+        expirePending();
         if (!(entity instanceof EntityLivingBase)) return;
         NBTTagCompound inventory = PENDING.remove(entity.entityId);
         if (inventory != null) CuriosInventory.get((EntityLivingBase) entity).readFromNBT(inventory);
@@ -171,6 +198,46 @@ public final class CuriosNetwork {
         List<NBTTagCompound> breakEvents = PENDING_BREAK_EVENTS.remove(entity.entityId);
         if (breakEvents != null) {
             for (NBTTagCompound payload : breakEvents) applyBreakEvent(payload, (EntityLivingBase) entity);
+        }
+        removePendingTimestampIfEmpty(entity.entityId);
+    }
+
+    private static List<NBTTagCompound> pendingCurioData(int entityId) {
+        trackPendingEntity(entityId);
+        return PENDING_CURIO_DATA.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>());
+    }
+
+    private static List<NBTTagCompound> pendingEvents(int entityId) {
+        trackPendingEntity(entityId);
+        return PENDING_BREAK_EVENTS.computeIfAbsent(entityId, ignored -> new ArrayList<NBTTagCompound>());
+    }
+
+    private static void trackPendingEntity(int entityId) {
+        PENDING_SINCE.putIfAbsent(entityId, System.nanoTime());
+        while (PENDING_SINCE.size() > MAX_PENDING_ENTITIES) {
+            Integer oldest = PENDING_SINCE.keySet().iterator().next();
+            clearPending(oldest);
+        }
+    }
+
+    private static void expirePending() {
+        long now = System.nanoTime();
+        Iterator<Map.Entry<Integer, Long>> iterator = PENDING_SINCE.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Long> entry = iterator.next();
+            if (now - entry.getValue() < PENDING_EXPIRY_NANOS) continue;
+            int entityId = entry.getKey();
+            iterator.remove();
+            PENDING.remove(entityId);
+            PENDING_CURIO_DATA.remove(entityId);
+            PENDING_BREAK_EVENTS.remove(entityId);
+        }
+    }
+
+    private static void removePendingTimestampIfEmpty(int entityId) {
+        if (!PENDING.containsKey(entityId) && !PENDING_CURIO_DATA.containsKey(entityId)
+            && !PENDING_BREAK_EVENTS.containsKey(entityId)) {
+            PENDING_SINCE.remove(entityId);
         }
     }
 
