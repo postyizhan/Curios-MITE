@@ -26,6 +26,12 @@ public final class CuriosNetwork {
     private static final Map<Integer, List<NBTTagCompound>> PENDING_BREAK_EVENTS =
         new HashMap<Integer, List<NBTTagCompound>>();
 
+    public static void clearPending() {
+        PENDING.clear();
+        PENDING_CURIO_DATA.clear();
+        PENDING_BREAK_EVENTS.clear();
+    }
+
     @Subscribe
     public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
         sync(event.getPlayer());
