@@ -505,14 +505,19 @@ public final class CuriosInventory implements ICuriosItemHandler {
         int shrink = Math.min(amount, slot.getSlots() - 1);
         if (shrink == 0) return;
         Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        List<Runnable> unequipCallbacks = new ArrayList<Runnable>();
         for (int i = slot.getSlots() - shrink; i < slot.getSlots(); i++) {
-            ICurio curio = getCurio(slot.stacks.getStackInSlot(i));
-            if (curio != null) curio.onUnequip(identifier, i, owner);
+            final int slotIndex = i;
+            ICurio curio = getCurio(slot.stacks.getStackInSlot(slotIndex));
+            if (curio != null) {
+                unequipCallbacks.add(() -> curio.onUnequip(identifier, slotIndex, owner));
+            }
             returnStack(owner, slot.stacks.getStackInSlot(i));
             returnStack(owner, slot.cosmetics.getStackInSlot(i));
         }
         slot.shrink(shrink);
         applyAttributeChanges(previousModifiers);
+        for (Runnable callback : unequipCallbacks) callback.run();
         CuriosNetwork.sync(owner);
     }
 
