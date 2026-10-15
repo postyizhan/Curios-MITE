@@ -9,11 +9,12 @@ import net.minecraft.EntityLivingBase;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
 import net.minecraft.ServerPlayer;
+import net.minecraft.WorldServer;
 import net.xiaoyu233.fml.reload.event.PlayerLoggedInEvent;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.common.CuriosInventory;
 
-/** Server-authoritative synchronization for the owning player's Curios inventory. */
+/** Server-authoritative synchronization for player Curios inventories. */
 public final class CuriosNetwork {
     public static final String CHANNEL = "Curios|Sync";
     private static final Map<Integer, NBTTagCompound> PENDING = new HashMap<Integer, NBTTagCompound>();
@@ -27,14 +28,29 @@ public final class CuriosNetwork {
         if (!(entity instanceof ServerPlayer) || entity.worldObj.isRemote) return;
         ServerPlayer player = (ServerPlayer) entity;
         if (player.playerNetServerHandler == null) return;
+        Packet250CustomPayload packet = createSnapshot(player);
+        if (packet == null) return;
+        player.playerNetServerHandler.sendPacketToPlayer(packet);
+        WorldServer world = player.getServerForPlayer();
+        if (world != null) world.sendPacketToAllPlayersTrackingEntity(player, packet);
+    }
+
+    public static void syncTo(ServerPlayer entity, ServerPlayer receiver) {
+        if (entity == null || receiver == null || entity.worldObj.isRemote
+            || receiver.playerNetServerHandler == null) return;
+        Packet250CustomPayload packet = createSnapshot(entity);
+        if (packet != null) receiver.playerNetServerHandler.sendPacketToPlayer(packet);
+    }
+
+    private static Packet250CustomPayload createSnapshot(ServerPlayer player) {
         NBTTagCompound payload = new NBTTagCompound();
         payload.setInteger("Entity", player.entityId);
         payload.setTag("Inventory", CuriosInventory.get(player).writeToNBT());
         try {
-            player.playerNetServerHandler.sendPacketToPlayer(
-                new Packet250CustomPayload(CHANNEL, CompressedStreamTools.compress(payload)));
+            return new Packet250CustomPayload(CHANNEL, CompressedStreamTools.compress(payload));
         } catch (Exception exception) {
             Curios.LOGGER.error("Failed to synchronize Curios inventory for entity {}", player.entityId, exception);
+            return null;
         }
     }
 
