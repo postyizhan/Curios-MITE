@@ -18,6 +18,14 @@ public abstract class FontRendererMixin {
     @Shadow private boolean unicodeFlag;
     @Shadow public abstract int getCharWidth(char character);
 
+    @Inject(method = "renderCharAtPos(ICZ)F", at = @At("HEAD"), cancellable = true)
+    private void curios$renderExtendedCharacter(int characterIndex, char character, boolean italic,
+                                               CallbackInfoReturnable<Float> cir) {
+        if (!unicodeFlag && characterIndex >= charWidth.length - 32) {
+            cir.setReturnValue(renderUnicodeChar(character, italic));
+        }
+    }
+
     @Inject(method = "renderDefaultChar(IZ)F", at = @At("HEAD"), cancellable = true)
     private void curios$renderExtendedCharacters(int characterIndex, boolean italic,
                                                 CallbackInfoReturnable<Float> cir) {
