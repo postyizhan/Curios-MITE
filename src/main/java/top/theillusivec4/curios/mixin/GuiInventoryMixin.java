@@ -14,13 +14,13 @@ import top.theillusivec4.curios.client.GuiCurios;
 public abstract class GuiInventoryMixin extends GuiScreen {
     @Inject(method = "initGui", at = @At("TAIL"))
     private void curios$addButton(CallbackInfo info) {
-        buttonList.add(new GuiButton(1846, width - 86, 5, 80, 20, "饰品"));
+        buttonList.add(new GuiButton(1846, width / 2 + 92, 5, 72, 20, "饰品"));
     }
 
     @Inject(method = "actionPerformed", at = @At("HEAD"), cancellable = true)
     private void curios$openScreen(GuiButton button, CallbackInfo info) {
         if (button.id != 1846) return;
-        Minecraft.getMinecraft().displayGuiScreen(new GuiCurios());
+        Minecraft.getMinecraft().displayGuiScreen(new GuiCurios((GuiScreen) (Object) this));
         info.cancel();
     }
 }

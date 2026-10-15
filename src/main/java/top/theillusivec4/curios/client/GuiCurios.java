@@ -29,6 +29,7 @@ public final class GuiCurios extends GuiScreen {
     private static final int SLOT_ROW_HEIGHT = 28;
     private static final int GRID_COLUMN_WIDTH = 150;
     private final RenderItem itemRenderer = new RenderItem();
+    private final GuiScreen parentScreen;
     private final List<SlotRef> visibleSlots = new ArrayList<SlotRef>();
     private final List<Integer> visibleSources = new ArrayList<Integer>();
     private ItemStack[] sourceSnapshot;
@@ -36,6 +37,10 @@ public final class GuiCurios extends GuiScreen {
     private int slotPage;
     private int sourcePage;
     private boolean cosmeticMode;
+
+    public GuiCurios(GuiScreen parentScreen) {
+        this.parentScreen = parentScreen;
+    }
 
     @Override public void initGui() {
         buttonList.clear();
@@ -132,7 +137,7 @@ public final class GuiCurios extends GuiScreen {
     @Override protected void actionPerformed(GuiButton button) {
         if (button.id == 0) slotPage = Math.max(0, slotPage - 1);
         else if (button.id == 1) slotPage = Math.min(pageCount(visibleSlots.size(), getSlotPageSize()) - 1, slotPage + 1);
-        else if (button.id == 2) mc.displayGuiScreen(null);
+        else if (button.id == 2) mc.displayGuiScreen(parentScreen);
         else if (button.id == 3) {
             cosmeticMode = !cosmeticMode;
             slotPage = 0;
