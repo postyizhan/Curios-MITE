@@ -1,7 +1,6 @@
 package top.theillusivec4.curios.mixin;
 
 import net.minecraft.EntityLivingBase;
-import net.minecraft.EntityPlayer;
 import net.minecraft.ModelBiped;
 import net.minecraft.RendererLivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,9 +14,11 @@ import top.theillusivec4.curios.client.CuriosRenderHooks;
 public abstract class RendererLivingEntityMixin {
     @Shadow protected net.minecraft.ModelBase mainModel;
 
-    @Inject(method = "renderEquippedItems", at = @At("TAIL"))
-    private void curios$renderCurios(EntityLivingBase entity, float partialTick, CallbackInfo info) {
-        if (entity instanceof EntityPlayer) return;
+    @Inject(method = "doRenderLiving", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/RendererLivingEntity;renderEquippedItems(Lnet/minecraft/EntityLivingBase;F)V",
+        shift = At.Shift.AFTER))
+    private void curios$renderCurios(EntityLivingBase entity, double x, double y, double z,
+                                     float yaw, float partialTick, CallbackInfo info) {
         CuriosRenderHooks.render(entity, mainModel instanceof ModelBiped ? (ModelBiped) mainModel : null, partialTick);
     }
 }
