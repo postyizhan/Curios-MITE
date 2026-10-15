@@ -200,6 +200,14 @@ public final class CuriosInventory implements ICuriosItemHandler {
             slotState.setInteger("SizeShift", slot.sizeShift);
             slotState.setBoolean("Visible", slot.visible);
             slotState.setBoolean("CosmeticEnabled", slot.cosmetic);
+            NBTTagList renderStates = new NBTTagList();
+            for (int index = 0; index < slot.getSlots(); index++) {
+                NBTTagCompound renderState = new NBTTagCompound();
+                renderState.setInteger("Index", index);
+                renderState.setBoolean("Render", slot.renders.get(index));
+                renderStates.appendTag(renderState);
+            }
+            slotState.setTag("Renders", renderStates);
             savedSlots.appendTag(slotState);
             for (int i = 0; i < slot.stacks.getSlots(); i++) {
                 ItemStack stack = slot.stacks.getStackInSlot(i);
@@ -316,6 +324,15 @@ public final class CuriosInventory implements ICuriosItemHandler {
             slot.resize(Math.max(1, Math.min(256, (type == null ? 1 : type.getSize()) + slot.sizeShift)));
             slot.visible = savedSlot.getBoolean("Visible");
             slot.cosmetic = savedSlot.getBoolean("CosmeticEnabled");
+            NBTTagList renderStates = savedSlot.getTagList("Renders");
+            for (int renderIndex = 0; renderIndex < renderStates.tagCount(); renderIndex++) {
+                if (!(renderStates.tagAt(renderIndex) instanceof NBTTagCompound)) continue;
+                NBTTagCompound renderState = (NBTTagCompound) renderStates.tagAt(renderIndex);
+                int index = renderState.getInteger("Index");
+                if (index >= 0 && index < slot.renders.size()) {
+                    slot.renders.set(index, renderState.getBoolean("Render"));
+                }
+            }
         }
         NBTTagList savedLocks = data.getTagList("Locked");
         for (int i = 0; i < savedLocks.tagCount(); i++) {
@@ -517,6 +534,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     private final class Slots implements ICurioStacksHandler {
         private final String id; private final StackHandler stacks, cosmetics;
+        private List<Boolean> renders;
         private int sizeShift;
         private boolean visible;
         private boolean cosmetic;
@@ -524,17 +542,27 @@ public final class CuriosInventory implements ICuriosItemHandler {
             this.id = id;
             this.stacks = new StackHandler(id, size, true);
             this.cosmetics = new StackHandler(id, size, false);
+            this.renders = new ArrayList<Boolean>(Collections.nCopies(size, Boolean.TRUE));
             this.visible = visible;
             this.cosmetic = cosmetic;
         }
         @Override public String getIdentifier() { return id; }
         @Override public IDynamicStackHandler getStacks() { return stacks; }
         @Override public IDynamicStackHandler getCosmeticStacks() { return cosmetics; }
+        @Override public List<Boolean> getRenders() { return renders; }
         @Override public int getSlots() { return stacks.getSlots(); }
         @Override public int getSizeShift() { return sizeShift; }
         @Override public boolean isVisible() { return visible; }
         @Override public boolean hasCosmetic() { return cosmetic; }
-        private void resize(int size) { stacks.resize(size); cosmetics.resize(size); }
+        private void resize(int size) {
+            stacks.resize(size);
+            cosmetics.resize(size);
+            List<Boolean> resizedRenders = new ArrayList<Boolean>(Collections.nCopies(size, Boolean.TRUE));
+            for (int index = 0; index < Math.min(size, renders.size()); index++) {
+                resizedRenders.set(index, renders.get(index));
+            }
+            renders = resizedRenders;
+        }
         private void grow(int amount) { resize(getSlots() + amount); sizeShift += amount; }
         private void shrink(int amount) { resize(Math.max(1, getSlots() - amount)); sizeShift -= amount; }
     }

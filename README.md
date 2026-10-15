@@ -4,7 +4,7 @@ Curios 的 Minecraft 1.6.4 MITE / FishModLoader 移植项目，为 BountifulBaub
 
 ## 当前状态
 
-`0.1.0` 提供面向旧版 BountifulBaubles 的首批 Java API：可按需合并槽位类型，通过旧版槽位预设和注册消息创建槽位，通过 Curios helper 查询实体饰品栏、扁平装备栏和匹配指定谓词或物品的已装备饰品，并定义饰品装备、卸下、tick 和属性修饰符回调。饰品可选择启用右键自动装备；服务端会选择首个可用槽位、扣除手持物品并同步背包。槽位注册保留优先级、图标、可见性、锁定和外观元数据；玩家 GUI 会忽略隐藏槽位。`CuriosApi.registerCurioProvider` 可按 ItemStack 创建 Curio 行为，替代 Forge item capability。handler 支持排队锁定/解锁和扩缩槽位，移除的装备会返还并更新属性及回调；耐久损坏通知会清除对应槽位、属性并触发卸下回调。玩家 GUI 可给启用 cosmetic 的槽位分配或取回外观物品；其外观模型渲染仍未实现。服务端槽位写入会校验 Curio 类型和装备限制，触发回调、更新属性并同步玩家及观察者快照。实体饰品栏与外观栏会随实体 NBT 存档。MITE API 使用 `Optional` 和 `IDynamicStackHandler`，不包含 Forge 专属 capability/item-handler 类型；通用内容物品合法性策略仍在移植中。
+`0.1.0` 提供面向旧版 BountifulBaubles 的首批 Java API：可按需合并槽位类型，通过旧版槽位预设和注册消息创建槽位，通过 Curios helper 查询实体饰品栏、扁平装备栏和匹配指定谓词或物品的已装备饰品，并定义饰品装备、卸下、tick 和属性修饰符回调。饰品可选择启用右键自动装备；服务端会选择首个可用槽位、扣除手持物品并同步背包。槽位注册保留优先级、图标、可见性、锁定和外观元数据；玩家 GUI 会忽略隐藏槽位。`CuriosApi.registerCurioProvider` 可按 ItemStack 创建 Curio 行为，替代 Forge item capability。handler 支持排队锁定/解锁和扩缩槽位，移除的装备会返还并更新属性及回调；耐久损坏通知会清除对应槽位、属性并触发卸下回调。玩家 GUI 可给启用 cosmetic 的槽位分配或取回外观物品；其外观模型渲染仍未实现。槽位逐格渲染状态可通过 `ICurioStacksHandler.getRenders()` 读取和修改，并随实体 NBT 保存。服务端槽位写入会校验 Curio 类型和装备限制，触发回调、更新属性并同步玩家及观察者快照。实体饰品栏与外观栏会随实体 NBT 存档。MITE API 使用 `Optional` 和 `IDynamicStackHandler`，不包含 Forge 专属 capability/item-handler 类型；通用内容物品合法性策略仍在移植中。
 
 当前目录中的现代 Curios 源码（NeoForge 26.x）仅作为行为参考；接口设计优先兼容 BountifulBaubles 使用的旧版 Curios 契约。
 

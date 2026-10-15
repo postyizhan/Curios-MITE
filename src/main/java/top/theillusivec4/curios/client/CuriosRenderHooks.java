@@ -21,6 +21,7 @@ public final class CuriosRenderHooks {
             IDynamicStackHandler equipped = slot.getStacks();
             IDynamicStackHandler cosmetics = slot.getCosmeticStacks();
             for (int index = 0; index < equipped.getSlots(); index++) {
+                if (!slot.getRenders().get(index)) continue;
                 ItemStack stack = slot.hasCosmetic() ? cosmetics.getStackInSlot(index) : null;
                 if (stack == null) stack = equipped.getStackInSlot(index);
                 ICurio curio = CuriosApi.getCurio(stack).orElse(null);
