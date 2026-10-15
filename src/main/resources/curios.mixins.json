@@ -3,7 +3,7 @@
   "package": "top.theillusivec4.curios.mixin",
   "compatibilityLevel": "JAVA_17",
   "target": "DEFAULT",
-  "mixins": ["EntityLivingBaseMixin", "EntityPlayerMixin", "EntityTrackerEntryMixin", "NetServerHandlerMixin"],
+  "mixins": ["EntityLivingBaseMixin", "EntityPlayerMixin", "EntityTrackerEntryMixin", "ItemRightClickMixin", "NetServerHandlerMixin"],
   "client": ["NetClientHandlerMixin", "GuiInventoryMixin", "FontRendererMixin", "RenderPlayerMixin", "RendererLivingEntityMixin"],
   "injectors": { "defaultRequire": 1 }
 }

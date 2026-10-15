@@ -100,6 +100,42 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (!stacks.isValidSlot(index) || stacks.getStackInSlot(index) != null) return false;
         return replace(identifier, index, stack);
     }
+
+    public boolean tryEquipFromRightClick(EntityPlayer player, ItemStack heldStack) {
+        if (player == null || heldStack == null || heldStack.stackSize <= 0) return false;
+        ICurio curio = getCurio(heldStack);
+        if (curio == null || !curio.canRightClickEquip()) return false;
+
+        ensureSlotTypes();
+        String targetIdentifier = null;
+        int targetIndex = -1;
+        for (Map.Entry<String, Slots> entry : slots.entrySet()) {
+            StackHandler stacks = entry.getValue().stacks;
+            if (!curio.canEquip(entry.getKey(), player)) continue;
+            for (int index = 0; index < stacks.getSlots(); index++) {
+                if (stacks.getStackInSlot(index) == null) {
+                    targetIdentifier = entry.getKey();
+                    targetIndex = index;
+                    break;
+                }
+            }
+            if (targetIdentifier != null) break;
+        }
+        if (targetIdentifier == null) return false;
+        if (player.worldObj.isRemote) return true;
+
+        ItemStack equipped = heldStack.copy();
+        equipped.stackSize = 1;
+        if (!equip(targetIdentifier, targetIndex, equipped)) return false;
+
+        int inventoryIndex = player.inventory.currentItem;
+        heldStack.stackSize--;
+        player.inventory.setInventorySlotContents(inventoryIndex, heldStack.stackSize > 0 ? heldStack : null);
+        player.inventoryContainer.detectAndSendChanges();
+        curio.playRightClickEquipSound(player);
+        return true;
+    }
+
     @Override public ItemStack unequip(String identifier, int index) {
         ensureSlotTypes();
         StackHandler stacks = slot(identifier).stacks;
