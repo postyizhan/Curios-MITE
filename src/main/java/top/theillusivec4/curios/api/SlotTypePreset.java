@@ -14,6 +14,7 @@ public enum SlotTypePreset {
     RING("ring", 160),
     BELT("belt", 180),
     CHARM("charm", 200),
+    FEET("feet", 220),
     CURIO("curio", 20);
 
     private final String identifier;
