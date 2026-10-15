@@ -9,6 +9,8 @@ import net.minecraft.GuiScreen;
 import net.minecraft.ItemStack;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
+import net.minecraft.RenderItem;
+import net.minecraft.RenderManager;
 import top.theillusivec4.curios.CuriosNetwork;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
@@ -21,6 +23,7 @@ public final class GuiCurios extends GuiScreen {
     private static final int SOURCE_ROW_HEIGHT = 18;
     private static final int SLOT_ROW_HEIGHT = 28;
     private static final int GRID_COLUMN_WIDTH = 150;
+    private final RenderItem itemRenderer = new RenderItem();
     private final List<SlotRef> visibleSlots = new ArrayList<SlotRef>();
     private final List<Integer> visibleSources = new ArrayList<Integer>();
     private int selectedSource = -1;
@@ -146,7 +149,8 @@ public final class GuiCurios extends GuiScreen {
             int x = 16 + column * GRID_COLUMN_WIDTH;
             int y = CONTENT_TOP + row * SOURCE_ROW_HEIGHT;
             int color = selectedSource == inventoryIndex ? 0xFFFF55 : 0xFFFFFF;
-            drawString(fontRenderer, inventoryIndex + ": " + trim(stack.getDisplayName(), 16), x, y, color);
+            itemRenderer.renderItemAndEffectIntoGUI(fontRenderer, RenderManager.instance.renderEngine, stack, x, y - 1);
+            drawString(fontRenderer, inventoryIndex + ": " + trim(stack.getDisplayName(), 13), x + 19, y, color);
         }
     }
 
@@ -166,9 +170,12 @@ public final class GuiCurios extends GuiScreen {
             ItemStack stack = stacks == null ? null : (cosmeticMode
                 ? stacks.getCosmeticStacks().getStackInSlot(slot.index)
                 : stacks.getStacks().getStackInSlot(slot.index));
-            String label = slot.identifier + " " + (slot.index + 1) + ": " + (stack == null ? "空" : trim(stack.getDisplayName(), 12));
+            if (stack != null) {
+                itemRenderer.renderItemAndEffectIntoGUI(fontRenderer, RenderManager.instance.renderEngine, stack, x, y - 2);
+            }
+            String label = slot.identifier + " " + (slot.index + 1) + ": " + (stack == null ? "空" : trim(stack.getDisplayName(), 9));
             int color = mouseX >= x - 3 && mouseX < x + 145 && mouseY >= y - 3 && mouseY < y + SLOT_ROW_HEIGHT - 4 ? 0xFFFF55 : 0xFFFFFF;
-            drawString(fontRenderer, trim(label, 24), x, y, color);
+            drawString(fontRenderer, trim(label, 20), x + 19, y, color);
         }
         if (visibleSlots.isEmpty()) drawString(fontRenderer, "暂无已注册槽位", width / 2 + 12, 56, 0xAAAAAA);
     }
