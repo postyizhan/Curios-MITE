@@ -46,6 +46,13 @@ public final class CuriosInventory implements ICuriosItemHandler {
         return inventory;
     }
 
+    public static synchronized void onStackBroken(ItemStack broken) {
+        if (broken == null) return;
+        for (CuriosInventory inventory : new ArrayList<CuriosInventory>(INSTANCES.values())) {
+            inventory.onBrokenCurio(broken);
+        }
+    }
+
     private CuriosInventory(EntityLivingBase entity) { this.entity = new WeakReference<EntityLivingBase>(entity); syncSlotTypes(); }
 
     private synchronized void syncSlotTypes() {
