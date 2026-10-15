@@ -27,7 +27,7 @@ public enum SlotTypePreset {
     public String getIdentifier() { return identifier; }
     public SlotTypeMessage.Builder getMessageBuilder() {
         return new SlotTypeMessage.Builder(identifier).priority(priority)
-            .icon(new ResourceLocation("curios", "item/empty_" + identifier + "_slot"));
+            .icon(new ResourceLocation("curios", "slot/empty_" + identifier + "_slot"));
     }
 
     public static Optional<SlotTypePreset> findPreset(String identifier) {

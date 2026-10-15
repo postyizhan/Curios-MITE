@@ -2,6 +2,7 @@ package top.theillusivec4.curios.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.lwjgl.opengl.GL11;
 import net.minecraft.CompressedStreamTools;
 import net.minecraft.EntityClientPlayerMP;
 import net.minecraft.GuiButton;
@@ -9,8 +10,10 @@ import net.minecraft.GuiScreen;
 import net.minecraft.ItemStack;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
+import net.minecraft.ResourceLocation;
 import net.minecraft.RenderItem;
 import net.minecraft.RenderManager;
+import net.minecraft.Tessellator;
 import top.theillusivec4.curios.CuriosNetwork;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
@@ -18,6 +21,8 @@ import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 /** Compact inventory page for equipping and removing Curios. */
 public final class GuiCurios extends GuiScreen {
+    private static final ResourceLocation COSMETIC_SLOT_ICON =
+        new ResourceLocation("curios", "slot/empty_cosmetic_slot");
     private static final int CONTENT_TOP = 52;
     private static final int CONTENT_BOTTOM_MARGIN = 60;
     private static final int SOURCE_ROW_HEIGHT = 18;
@@ -172,12 +177,33 @@ public final class GuiCurios extends GuiScreen {
                 : stacks.getStacks().getStackInSlot(slot.index));
             if (stack != null) {
                 itemRenderer.renderItemAndEffectIntoGUI(fontRenderer, RenderManager.instance.renderEngine, stack, x, y - 2);
+            } else {
+                ResourceLocation icon = cosmeticMode ? COSMETIC_SLOT_ICON
+                    : CuriosApi.getSlotType(slot.identifier).map(type -> type.getIcon()).orElse(null);
+                drawSlotIcon(icon, x, y - 2);
             }
             String label = slot.identifier + " " + (slot.index + 1) + ": " + (stack == null ? "空" : trim(stack.getDisplayName(), 9));
             int color = mouseX >= x - 3 && mouseX < x + 145 && mouseY >= y - 3 && mouseY < y + SLOT_ROW_HEIGHT - 4 ? 0xFFFF55 : 0xFFFFFF;
             drawString(fontRenderer, trim(label, 20), x + 19, y, color);
         }
         if (visibleSlots.isEmpty()) drawString(fontRenderer, "暂无已注册槽位", width / 2 + 12, 56, 0xAAAAAA);
+    }
+
+    private void drawSlotIcon(ResourceLocation icon, int x, int y) {
+        if (icon == null || RenderManager.instance == null || RenderManager.instance.renderEngine == null) return;
+        String path = icon.getResourcePath();
+        if (!path.startsWith("textures/")) path = "textures/" + path;
+        if (!path.endsWith(".png")) path += ".png";
+        RenderManager.instance.renderEngine.bindTexture(new ResourceLocation(icon.getResourceDomain(), path));
+
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+        tessellator.addVertexWithUV(x, y + 16, zLevel, 0.0D, 1.0D);
+        tessellator.addVertexWithUV(x + 16, y + 16, zLevel, 1.0D, 1.0D);
+        tessellator.addVertexWithUV(x + 16, y, zLevel, 1.0D, 0.0D);
+        tessellator.addVertexWithUV(x, y, zLevel, 0.0D, 0.0D);
+        tessellator.draw();
     }
 
     private int getSourceRows() { return Math.max(1, (height - CONTENT_TOP - CONTENT_BOTTOM_MARGIN) / SOURCE_ROW_HEIGHT); }
