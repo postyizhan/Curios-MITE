@@ -206,6 +206,59 @@ public final class CuriosInventory implements ICuriosItemHandler {
 
     public int getLootingBonus() { return getEnchantmentBonus(false); }
 
+    public void onDeath() {
+        EntityLivingBase owner = entity.get();
+        if (owner == null || owner.worldObj.isRemote || owner instanceof EntityPlayer) return;
+
+        boolean keepInventory = owner.worldObj.getGameRules().getGameRuleBooleanValue("keepInventory");
+        boolean mobLoot = owner.worldObj.getGameRules().getGameRuleBooleanValue("doMobLoot");
+        Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        List<Runnable> unequipCallbacks = new ArrayList<Runnable>();
+        boolean changed = false;
+
+        for (Map.Entry<String, Slots> entry : slots.entrySet()) {
+            Slots slot = entry.getValue();
+            for (int index = 0; index < slot.getSlots(); index++) {
+                ItemStack stack = slot.stacks.getStackInSlot(index);
+                ICurio curio = getCurio(stack);
+                if (removeOnDeath(stack, curio, owner, keepInventory, mobLoot)) {
+                    slot.stacks.setRaw(index, null);
+                    slot.stacks.setPreviousStackInSlot(index, null);
+                    if (curio != null) {
+                        final String identifier = entry.getKey();
+                        final int slotIndex = index;
+                        unequipCallbacks.add(() -> curio.onUnequip(identifier, slotIndex, owner));
+                    }
+                    changed = true;
+                }
+
+                ItemStack cosmetic = slot.cosmetics.getStackInSlot(index);
+                if (removeOnDeath(cosmetic, getCurio(cosmetic), owner, keepInventory, mobLoot)) {
+                    slot.cosmetics.setRaw(index, null);
+                    slot.cosmetics.setPreviousStackInSlot(index, null);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            applyAttributeChanges(previousModifiers);
+            for (Runnable callback : unequipCallbacks) callback.run();
+            CuriosNetwork.sync(owner);
+        }
+    }
+
+    private boolean removeOnDeath(ItemStack stack, ICurio curio, EntityLivingBase owner,
+                                  boolean keepInventory, boolean mobLoot) {
+        if (stack == null) return false;
+        ICurio.DropRule rule = curio == null ? ICurio.DropRule.DEFAULT : curio.getDropRule(owner);
+        if (rule == null) rule = ICurio.DropRule.DEFAULT;
+        if (rule == ICurio.DropRule.ALWAYS_KEEP
+            || (rule == ICurio.DropRule.DEFAULT && keepInventory)) return false;
+        if (mobLoot && rule != ICurio.DropRule.DESTROY) owner.dropItemStack(stack.copy(), 0.0F);
+        return true;
+    }
+
     private int getEnchantmentBonus(boolean fortune) {
         ensureSlotTypes();
         EntityLivingBase owner = entity.get();

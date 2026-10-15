@@ -1,5 +1,6 @@
 package top.theillusivec4.curios.mixin;
 
+import net.minecraft.DamageSource;
 import net.minecraft.EntityLivingBase;
 import net.minecraft.NBTTagCompound;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +19,11 @@ public abstract class EntityLivingBaseMixin {
         EntityLivingBase entity = (EntityLivingBase) (Object) this;
         CuriosInventory.get(entity).tick();
         if (entity.worldObj.isRemote) CuriosNetwork.applyPending(entity);
+    }
+
+    @Inject(method = "onDeath(Lnet/minecraft/DamageSource;)V", at = @At("TAIL"))
+    private void curios$onDeath(DamageSource source, CallbackInfo info) {
+        CuriosInventory.get((EntityLivingBase) (Object) this).onDeath();
     }
 
     @Inject(method = "writeEntityToNBT", at = @At("TAIL"))

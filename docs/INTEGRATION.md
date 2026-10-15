@@ -56,7 +56,7 @@ public final class ExampleCharm extends Item implements ICurioItem {
 }
 ```
 
-`onEquip`, `onUnequip`, `curioTick`, `canEquip`, `canUnequip`, attribute modifiers, Fortune/Looting bonuses, break callbacks, and clone drop rules are exposed on `ICurio`. Curio instances are requested from the current `ItemStack`, so implementations should not cache stack-specific state in a shared item singleton.
+`onEquip`, `onUnequip`, `curioTick`, `canEquip`, `canUnequip`, attribute modifiers, Fortune/Looting bonuses, break callbacks, and death drop rules are exposed on `ICurio`. `DEFAULT` follows `keepInventory`; `ALWAYS_DROP`, `ALWAYS_KEEP`, and `DESTROY` override that rule. Player death evaluates these rules while cloning the player. Other living entities evaluate them in `onDeath`; `doMobLoot` suppresses non-player drops. Curio instances are requested from the current `ItemStack`, so implementations should not cache stack-specific state in a shared item singleton.
 
 ## Restrict Slot Types
 
