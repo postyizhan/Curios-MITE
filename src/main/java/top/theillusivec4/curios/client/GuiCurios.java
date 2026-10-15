@@ -66,7 +66,7 @@ public final class GuiCurios extends GuiScreen {
                 EntityClientPlayerMP player = mc.thePlayer;
                 if (player != null && inventorySlot < player.inventory.mainInventory.length) {
                     ItemStack stack = player.inventory.mainInventory[inventorySlot];
-                    if (stack != null && (cosmeticMode || stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem)) {
+                    if (stack != null && (cosmeticMode || CuriosApi.getCurio(stack).isPresent())) {
                         selectedSource = selectedSource == inventorySlot ? -1 : inventorySlot;
                     }
                     return;
@@ -108,7 +108,7 @@ public final class GuiCurios extends GuiScreen {
                 int index = column * 18 + row;
                 if (index >= player.inventory.mainInventory.length) continue;
                 ItemStack stack = player.inventory.mainInventory[index];
-                if (stack == null || (!cosmeticMode && !(stack.getItem() instanceof top.theillusivec4.curios.api.type.capability.ICurioItem))) continue;
+                if (stack == null || (!cosmeticMode && !CuriosApi.getCurio(stack).isPresent())) continue;
                 int x = 16 + column * 150;
                 int y = 52 + row * 18;
                 int color = selectedSource == index ? 0xFFFF55 : 0xFFFFFF;
