@@ -22,6 +22,7 @@ public interface ICurio {
     default void playRightClickEquipSound(EntityLivingBase entity) {
         entity.playSound("random.pop", 0.2F, 1.0F);
     }
+    default void curioBreak(ItemStack stack, EntityLivingBase entity) {}
     default boolean canRender(String identifier, int index, EntityLivingBase entity) { return false; }
     default void render(String identifier, int index, EntityLivingBase entity, float partialTick) {}
     default DropRule getDropRule(EntityLivingBase entity) { return DropRule.DEFAULT; }

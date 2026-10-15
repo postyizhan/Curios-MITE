@@ -155,6 +155,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (broken == null) return;
         Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
         ICurio curio = getCurio(broken);
+        CuriosNetwork.sendBreakEvent(owner, identifier, index, broken.copy());
         slot.stacks.setRaw(index, null);
         applyAttributeChanges(previousModifiers);
         if (curio != null) curio.onUnequip(identifier, index, owner);

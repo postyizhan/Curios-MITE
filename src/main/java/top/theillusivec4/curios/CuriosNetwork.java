@@ -9,6 +9,7 @@ import net.minecraft.EntityLivingBase;
 import net.minecraft.NBTTagCompound;
 import net.minecraft.Packet250CustomPayload;
 import net.minecraft.ServerPlayer;
+import net.minecraft.ItemStack;
 import net.minecraft.WorldServer;
 import net.xiaoyu233.fml.reload.event.PlayerLoggedInEvent;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
@@ -42,6 +43,33 @@ public final class CuriosNetwork {
         if (packet != null) receiver.playerNetServerHandler.sendPacketToPlayer(packet);
     }
 
+    public static void sendBreakEvent(EntityLivingBase entity, String identifier, int index, ItemStack stack) {
+        if (entity == null || entity.worldObj.isRemote || stack == null) return;
+        NBTTagCompound payload = new NBTTagCompound();
+        payload.setInteger("Entity", entity.entityId);
+        payload.setBoolean("Break", true);
+        payload.setString("Identifier", identifier);
+        payload.setInteger("Index", index);
+        payload.setTag("Stack", stack.writeToNBT(new NBTTagCompound()));
+        Packet250CustomPayload packet;
+        try {
+            packet = new Packet250CustomPayload(CHANNEL, CompressedStreamTools.compress(payload));
+        } catch (Exception exception) {
+            Curios.LOGGER.error("Failed to synchronize Curios break event for entity {}", entity.entityId, exception);
+            return;
+        }
+        if (entity instanceof ServerPlayer) {
+            ServerPlayer player = (ServerPlayer) entity;
+            if (player.playerNetServerHandler != null) player.playerNetServerHandler.sendPacketToPlayer(packet);
+        }
+        if (entity instanceof ServerPlayer) {
+            WorldServer world = ((ServerPlayer) entity).getServerForPlayer();
+            if (world != null) world.sendPacketToAllPlayersTrackingEntity(entity, packet);
+        } else if (entity.worldObj instanceof WorldServer) {
+            ((WorldServer) entity.worldObj).sendPacketToAllPlayersTrackingEntity(entity, packet);
+        }
+    }
+
     private static Packet250CustomPayload createSnapshot(ServerPlayer player) {
         NBTTagCompound payload = new NBTTagCompound();
         payload.setInteger("Entity", player.entityId);
@@ -64,8 +92,17 @@ public final class CuriosNetwork {
     }
 
     public static void receive(NBTTagCompound payload, Entity entity) {
-        if (payload == null || !payload.hasKey("Entity") || !payload.hasKey("Inventory")) return;
+        if (payload == null || !payload.hasKey("Entity")) return;
         int entityId = payload.getInteger("Entity");
+        if (payload.getBoolean("Break")) {
+            if (!(entity instanceof EntityLivingBase) || !payload.hasKey("Stack")) return;
+            EntityLivingBase living = (EntityLivingBase) entity;
+            ItemStack broken = ItemStack.loadItemStackFromNBT(payload.getCompoundTag("Stack"));
+            top.theillusivec4.curios.api.CuriosApi.getCurio(broken)
+                .ifPresent(curio -> curio.curioBreak(broken, living));
+            return;
+        }
+        if (!payload.hasKey("Inventory")) return;
         PENDING.remove(entityId);
         NBTTagCompound inventory = payload.getCompoundTag("Inventory");
         EntityLivingBase living = entity instanceof EntityLivingBase ? (EntityLivingBase) entity : null;
