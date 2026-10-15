@@ -419,6 +419,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (nextCurio != null && !nextCurio.canEquip(identifier, owner)) return false;
 
         Multimap<Attribute, AttributeModifier> previousModifiers = getAttributeModifiers();
+        stacks.setPreviousStackInSlot(index, previousStack);
         stacks.setRaw(index, stack);
         applyAttributeChanges(previousModifiers);
         if (previousCurio != null) previousCurio.onUnequip(identifier, index, owner);
@@ -524,6 +525,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         EntityLivingBase owner = entity.get();
         if (owner == null || owner.worldObj.isRemote) return null;
         ItemStack previous = slot.cosmetics.getStackInSlot(index);
+        slot.cosmetics.setPreviousStackInSlot(index, previous);
         slot.cosmetics.setRaw(index, stack);
         CuriosNetwork.sync(owner);
         return previous;
@@ -634,7 +636,7 @@ public final class CuriosInventory implements ICuriosItemHandler {
         @Override public ItemStack getPreviousStackInSlot(int slot) { return previousValues[slot]; }
         @Override public void setPreviousStackInSlot(int slot, ItemStack stack) {
             if (!isValidSlot(slot)) throw new IndexOutOfBoundsException("Curios slot index: " + slot);
-            previousValues[slot] = stack;
+            previousValues[slot] = stack == null ? null : stack.copy();
         }
         @Override public void grow(int amount) {
             if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
