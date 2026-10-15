@@ -39,8 +39,35 @@ public class CuriosInventoryDeathTest {
         assertDisposition(null, false, true, CuriosInventory.DeathDisposition.DROP);
     }
 
+    @Test
+    public void cloneDefaultRuleFollowsKeepInventory() {
+        assertCloneDisposition(ICurio.DropRule.DEFAULT, true, CuriosInventory.DeathDisposition.KEEP);
+        assertCloneDisposition(ICurio.DropRule.DEFAULT, false, CuriosInventory.DeathDisposition.DROP);
+        assertCloneDisposition(null, true, CuriosInventory.DeathDisposition.KEEP);
+        assertCloneDisposition(null, false, CuriosInventory.DeathDisposition.DROP);
+    }
+
+    @Test
+    public void cloneAlwaysDropAndAlwaysKeepOverrideKeepInventory() {
+        assertCloneDisposition(ICurio.DropRule.ALWAYS_DROP, true, CuriosInventory.DeathDisposition.DROP);
+        assertCloneDisposition(ICurio.DropRule.ALWAYS_DROP, false, CuriosInventory.DeathDisposition.DROP);
+        assertCloneDisposition(ICurio.DropRule.ALWAYS_KEEP, true, CuriosInventory.DeathDisposition.KEEP);
+        assertCloneDisposition(ICurio.DropRule.ALWAYS_KEEP, false, CuriosInventory.DeathDisposition.KEEP);
+    }
+
+    @Test
+    public void cloneDestroyNeverKeepsOrDrops() {
+        assertCloneDisposition(ICurio.DropRule.DESTROY, true, CuriosInventory.DeathDisposition.DESTROY);
+        assertCloneDisposition(ICurio.DropRule.DESTROY, false, CuriosInventory.DeathDisposition.DESTROY);
+    }
+
     private static void assertDisposition(ICurio.DropRule rule, boolean keepInventory, boolean mobLoot,
                                           CuriosInventory.DeathDisposition expected) {
         assertEquals(expected, CuriosInventory.getDeathDisposition(rule, keepInventory, mobLoot));
+    }
+
+    private static void assertCloneDisposition(ICurio.DropRule rule, boolean keepInventory,
+                                               CuriosInventory.DeathDisposition expected) {
+        assertEquals(expected, CuriosInventory.getCloneDisposition(rule, keepInventory));
     }
 }

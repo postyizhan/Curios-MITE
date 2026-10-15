@@ -266,6 +266,14 @@ public final class CuriosInventory implements ICuriosItemHandler {
         return DeathDisposition.DROP;
     }
 
+    static DeathDisposition getCloneDisposition(ICurio.DropRule rule, boolean keepInventory) {
+        if (rule == null) rule = ICurio.DropRule.DEFAULT;
+        if (rule == ICurio.DropRule.DESTROY) return DeathDisposition.DESTROY;
+        if (rule == ICurio.DropRule.ALWAYS_DROP
+            || (rule == ICurio.DropRule.DEFAULT && !keepInventory)) return DeathDisposition.DROP;
+        return DeathDisposition.KEEP;
+    }
+
     enum DeathDisposition { KEEP, DROP, DESTROY }
 
     private int getEnchantmentBonus(boolean fortune) {
@@ -442,11 +450,11 @@ public final class CuriosInventory implements ICuriosItemHandler {
         if (stack == null) return false;
         ICurio curio = getCurio(stack);
         ICurio.DropRule rule = curio == null ? ICurio.DropRule.DEFAULT : curio.getDropRule(owner);
-        if (rule == ICurio.DropRule.DESTROY) {
+        DeathDisposition disposition = getCloneDisposition(rule, keepInventory);
+        if (disposition == DeathDisposition.DESTROY) {
             target.setRaw(index, null);
             return false;
-        } else if (rule == ICurio.DropRule.ALWAYS_DROP
-            || (rule == ICurio.DropRule.DEFAULT && !keepInventory)) {
+        } else if (disposition == DeathDisposition.DROP) {
             target.setRaw(index, null);
             owner.dropPlayerItem(stack.copy());
             return false;
