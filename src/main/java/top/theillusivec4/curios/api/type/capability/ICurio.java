@@ -19,6 +19,8 @@ public interface ICurio {
     default void curioAnimate(String identifier, int index, EntityLivingBase entity) {}
     default boolean canEquip(String identifier, EntityLivingBase entity) { return true; }
     default boolean canUnequip(String identifier, EntityLivingBase entity) { return true; }
+    default int getFortuneBonus(String identifier, EntityLivingBase entity, ItemStack stack, int index) { return 0; }
+    default int getLootingBonus(String identifier, EntityLivingBase entity, ItemStack stack, int index) { return 0; }
     default boolean canRightClickEquip() { return false; }
     default void playRightClickEquipSound(EntityLivingBase entity) {
         entity.playSound("random.pop", 0.2F, 1.0F);

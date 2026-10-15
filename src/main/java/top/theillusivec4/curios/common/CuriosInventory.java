@@ -173,6 +173,32 @@ public final class CuriosInventory implements ICuriosItemHandler {
         }
         return modifiers;
     }
+
+    public int getFortuneBonus() { return getEnchantmentBonus(true); }
+
+    public int getLootingBonus() { return getEnchantmentBonus(false); }
+
+    private int getEnchantmentBonus(boolean fortune) {
+        ensureSlotTypes();
+        EntityLivingBase owner = entity.get();
+        if (owner == null) return 0;
+
+        int bonus = 0;
+        for (Map.Entry<String, Slots> entry : slots.entrySet()) {
+            IDynamicStackHandler stacks = entry.getValue().getStacks();
+            for (int index = 0; index < stacks.getSlots(); index++) {
+                ItemStack stack = stacks.getStackInSlot(index);
+                ICurio curio = getCurio(stack);
+                if (stack != null && curio != null) {
+                    bonus += fortune
+                        ? curio.getFortuneBonus(entry.getKey(), owner, stack, index)
+                        : curio.getLootingBonus(entry.getKey(), owner, stack, index);
+                }
+            }
+        }
+        return bonus;
+    }
+
     @Override public void tick() {
         ensureSlotTypes();
         EntityLivingBase owner = entity.get();

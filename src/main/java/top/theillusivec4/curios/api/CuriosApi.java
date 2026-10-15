@@ -133,4 +133,12 @@ public final class CuriosApi {
     public static Optional<ICuriosItemHandler> getCuriosHandler(EntityLivingBase entity) {
         return entity == null ? Optional.<ICuriosItemHandler>empty() : Optional.<ICuriosItemHandler>of(CuriosInventory.get(entity));
     }
+
+    public static int getFortuneBonus(EntityLivingBase entity) {
+        return entity == null ? 0 : CuriosInventory.get(entity).getFortuneBonus();
+    }
+
+    public static int getLootingBonus(EntityLivingBase entity) {
+        return entity == null ? 0 : CuriosInventory.get(entity).getLootingBonus();
+    }
 }
