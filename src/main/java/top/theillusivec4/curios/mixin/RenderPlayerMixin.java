@@ -1,8 +1,10 @@
 package top.theillusivec4.curios.mixin;
 
 import net.minecraft.EntityLivingBase;
+import net.minecraft.ModelBiped;
 import net.minecraft.RenderPlayer;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -10,8 +12,10 @@ import top.theillusivec4.curios.client.CuriosRenderHooks;
 
 @Mixin(RenderPlayer.class)
 public abstract class RenderPlayerMixin {
+    @Shadow private ModelBiped modelBipedMain;
+
     @Inject(method = "renderEquippedItems", at = @At("TAIL"))
     private void curios$renderPlayerCurios(EntityLivingBase entity, float partialTick, CallbackInfo info) {
-        CuriosRenderHooks.render(entity, partialTick);
+        CuriosRenderHooks.render(entity, modelBipedMain, partialTick);
     }
 }
