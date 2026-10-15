@@ -109,6 +109,12 @@ public final class CuriosInventory implements ICuriosItemHandler {
         return replace(identifier, index, stack);
     }
 
+    @Override public boolean setEquippedStack(String identifier, int index, ItemStack stack) {
+        ensureSlotTypes();
+        if (stack != null && stack.stackSize != 1) return false;
+        return replace(identifier, index, stack);
+    }
+
     public boolean tryEquipFromRightClick(EntityPlayer player, ItemStack heldStack) {
         if (player == null || heldStack == null || heldStack.stackSize <= 0) return false;
         ICurio curio = getCurio(heldStack);

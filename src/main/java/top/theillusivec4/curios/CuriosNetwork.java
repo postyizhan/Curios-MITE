@@ -304,12 +304,14 @@ public final class CuriosNetwork {
             player.inventoryContainer.detectAndSendChanges();
             return;
         }
-        if (!inventory.equip(identifier, index, equipped)) return;
+        ItemStack previous = slotHandler.get().getStacks().getStackInSlot(index);
+        if (!inventory.setEquippedStack(identifier, index, equipped)) return;
         if (original.stackSize == 1) player.inventory.setInventorySlotContents(source, null);
         else {
             original.stackSize--;
             player.inventory.setInventorySlotContents(source, original);
         }
+        if (previous != null) player.inventory.addItemStackToInventoryOrDropIt(previous);
         player.inventoryContainer.detectAndSendChanges();
     }
 }
