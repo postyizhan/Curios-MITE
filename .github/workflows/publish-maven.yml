@@ -24,7 +24,7 @@ jobs:
           cache: gradle
 
       - name: Build Maven repository
-        run: ./gradlew publishMavenJavaPublicationToGitHubPagesRepository --no-daemon
+        run: bash ./gradlew publishMavenJavaPublicationToGitHubPagesRepository --no-daemon
 
       - name: Publish to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
