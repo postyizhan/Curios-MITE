@@ -11,7 +11,7 @@ CuriosApi.registerSlotType(
     new SlotTypeMessage.Builder("example:ring")
         .size(2)
         .priority(160)
-        .icon(new ResourceLocation("example", "slot/empty_ring"))
+        .icon(new ResourceLocation("example", "textures/slot/empty_ring.png"))
         .cosmetic()
         .build()
 );

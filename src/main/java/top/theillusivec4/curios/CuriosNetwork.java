@@ -272,6 +272,26 @@ public final class CuriosNetwork {
         CuriosInventory inventory = CuriosInventory.get(player);
         java.util.Optional<ICurioStacksHandler> slotHandler = inventory.getStacksHandler(identifier);
         if (!slotHandler.isPresent() || index < 0 || index >= slotHandler.get().getStacks().getSlots()) return;
+        if (payload.getBoolean("Carried")) {
+            ItemStack carried = player.inventory.getItemStack();
+            if (carried == null || carried.stackSize <= 0) return;
+            ItemStack equipped = carried.copy();
+            equipped.stackSize = 1;
+            if (cosmetic) {
+                if (!slotHandler.get().hasCosmetic()) return;
+                ItemStack previous = slotHandler.get().getCosmeticStacks().getStackInSlot(index);
+                if (!inventory.setCosmetic(identifier, index, equipped)) return;
+                consumeCarriedItem(player, carried);
+                if (previous != null) player.inventory.addItemStackToInventoryOrDropIt(previous);
+            } else {
+                ItemStack previous = slotHandler.get().getStacks().getStackInSlot(index);
+                if (!inventory.setEquippedStack(identifier, index, equipped)) return;
+                consumeCarriedItem(player, carried);
+                if (previous != null) player.inventory.addItemStackToInventoryOrDropIt(previous);
+            }
+            player.inventoryContainer.detectAndSendChanges();
+            return;
+        }
         if (source == -1) {
             net.minecraft.ItemStack removed;
             if (cosmetic) {
@@ -313,5 +333,13 @@ public final class CuriosNetwork {
         }
         if (previous != null) player.inventory.addItemStackToInventoryOrDropIt(previous);
         player.inventoryContainer.detectAndSendChanges();
+    }
+
+    private static void consumeCarriedItem(ServerPlayer player, ItemStack carried) {
+        if (carried.stackSize <= 1) player.inventory.setItemStack(null);
+        else {
+            carried.stackSize--;
+            player.inventory.setItemStack(carried);
+        }
     }
 }

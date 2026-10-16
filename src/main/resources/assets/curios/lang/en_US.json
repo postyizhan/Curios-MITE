@@ -1,0 +1,15 @@
+{
+  "curios.gui.previous": "Previous Page",
+  "curios.gui.next": "Next Page",
+  "curios.gui.back": "Back",
+  "curios.gui.cosmetic_off": "Cosmetic: Off",
+  "curios.gui.cosmetic_on": "Cosmetic: On",
+  "curios.gui.cosmetic_short": "Cosmetic",
+  "curios.gui.title": "Curios",
+  "curios.gui.instructions": "Select item, then slot. Empty selection removes.",
+  "curios.gui.instructions_cosmetic": "Select item, then cosmetic slot. Empty selection removes.",
+  "curios.gui.inventory_page": "Inventory %s/%s",
+  "curios.gui.slots_page": "Registered Slots %s/%s",
+  "curios.gui.empty": "Empty",
+  "curios.gui.no_slots": "No registered slots"
+}

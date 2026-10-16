@@ -1,0 +1,15 @@
+{
+  "curios.gui.previous": "上一页",
+  "curios.gui.next": "下一页",
+  "curios.gui.back": "返回",
+  "curios.gui.cosmetic_off": "外观：关闭",
+  "curios.gui.cosmetic_on": "外观：开启",
+  "curios.gui.cosmetic_short": "外观",
+  "curios.gui.title": "饰品",
+  "curios.gui.instructions": "选择饰品后点击槽位；未选择物品时点击已装备槽位可卸下。",
+  "curios.gui.instructions_cosmetic": "选择物品后点击外观槽；未选择物品时点击已装备槽位可卸下。",
+  "curios.gui.inventory_page": "背包物品 %s/%s",
+  "curios.gui.slots_page": "已注册槽位 %s/%s",
+  "curios.gui.empty": "空",
+  "curios.gui.no_slots": "暂无已注册槽位"
+}

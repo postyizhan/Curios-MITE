@@ -9,18 +9,21 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.theillusivec4.curios.client.GuiCurios;
+import top.theillusivec4.curios.client.GuiCuriosButton;
 
 @Mixin(GuiInventory.class)
 public abstract class GuiInventoryMixin extends GuiScreen {
     @Inject(method = "initGui", at = @At("TAIL"))
     private void curios$addButton(CallbackInfo info) {
-        buttonList.add(new GuiButton(1846, width / 2 + 92, 5, 72, 20, "饰品"));
+        int guiLeft = (width - 176) / 2;
+        int guiTop = (height - 166) / 2;
+        buttonList.add(new GuiCuriosButton(1846, guiLeft + 28, guiTop + 10));
     }
 
     @Inject(method = "actionPerformed", at = @At("HEAD"), cancellable = true)
     private void curios$openScreen(GuiButton button, CallbackInfo info) {
         if (button.id != 1846) return;
-        Minecraft.getMinecraft().displayGuiScreen(new GuiCurios((GuiScreen) (Object) this));
+        Minecraft.getMinecraft().displayGuiScreen(new GuiCurios(Minecraft.getMinecraft().thePlayer));
         info.cancel();
     }
 }
