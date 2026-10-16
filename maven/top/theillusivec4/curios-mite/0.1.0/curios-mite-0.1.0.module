@@ -1,0 +1,103 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "top.theillusivec4",
+    "module": "curios-mite",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.5"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "curios-mite-0.1.0.jar",
+          "url": "curios-mite-0.1.0.jar",
+          "size": 105384,
+          "sha512": "a6a311ce60f2e2939e4caf0e36de30b0e712117a1dbdfb04a5e6a38359929e781aedb0dd54b7def0bfb5660d7bffdbbca3b1d6c82d8423f1b657a0d953130e85",
+          "sha256": "bcf9a81d533dd70dcd5a4623a89249f736cee527ce7fee57c6deb8acb6a81be5",
+          "sha1": "020a1635f77ae108237c29d98125a296f9c076b1",
+          "md5": "95f64900b71317ed9686da47e4bbca6f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "it.unimi.dsi",
+          "module": "fastutil",
+          "version": {
+            "requires": "8.5.12"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "com.github.MinecraftIsTooEasy",
+          "module": "FishModLoader",
+          "version": {
+            "requires": "3.4.3"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "curios-mite-0.1.0.jar",
+          "url": "curios-mite-0.1.0.jar",
+          "size": 105384,
+          "sha512": "a6a311ce60f2e2939e4caf0e36de30b0e712117a1dbdfb04a5e6a38359929e781aedb0dd54b7def0bfb5660d7bffdbbca3b1d6c82d8423f1b657a0d953130e85",
+          "sha256": "bcf9a81d533dd70dcd5a4623a89249f736cee527ce7fee57c6deb8acb6a81be5",
+          "sha1": "020a1635f77ae108237c29d98125a296f9c076b1",
+          "md5": "95f64900b71317ed9686da47e4bbca6f"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "curios-mite-0.1.0-sources.jar",
+          "url": "curios-mite-0.1.0-sources.jar",
+          "size": 56512,
+          "sha512": "daefc58648d95fdfb9d65da4af95c8ee957419387b9ad7631ec7b8973c56e11f96ac397ed89ccd91d2b3944c87c7be7a7fea97469ae658d066ad062de4738ca4",
+          "sha256": "0d936b9b508202038c482f4af1f9a89f48fedcb0d1f3e877e8289ccbdc32cb59",
+          "sha1": "01a0860c8a519fd407ea06bcf418ec5a17e6ec67",
+          "md5": "9c9ffd9bb6d27644989665ae76f780b6"
+        }
+      ]
+    }
+  ]
+}
