@@ -23,6 +23,25 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Fetch Minecraft MITE dependency
+        uses: actions/checkout@v4
+        with:
+          repository: MinecraftIsTooEasy/FishModLoader
+          ref: 3.4.x
+          path: .fishmodloader
+          sparse-checkout: libs.zip
+          sparse-checkout-cone-mode: false
+
+      - name: Install Minecraft MITE jar for FML Loom
+        shell: bash
+        run: |
+          set -euo pipefail
+          mite_cache="$HOME/.gradle/caches/fml-loom/1.6.4-MITE"
+          extract_dir="$(mktemp -d)"
+          mkdir -p "$mite_cache"
+          (cd "$extract_dir" && jar xf "$GITHUB_WORKSPACE/.fishmodloader/libs.zip" 1.6.4-MITE.jar)
+          cp "$extract_dir/1.6.4-MITE.jar" "$mite_cache/1.6.4-MITE.jar"
+
       - name: Build Maven repository
         run: bash ./gradlew publishMavenJavaPublicationToGitHubPagesRepository --no-daemon
 
