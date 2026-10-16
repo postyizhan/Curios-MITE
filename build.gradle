@@ -55,4 +55,18 @@ jar {
     from('LICENSE') { rename { "${it}_${inputs.properties.archivesName}" } }
 }
 
-publishing { publications { mavenJava(MavenPublication) { from components.java } } }
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = project.maven_id
+            from components.java
+        }
+    }
+    repositories {
+        // The GitHub Actions workflow deploys this directory to the public gh-pages branch.
+        maven {
+            name = 'GitHubPages'
+            url = layout.buildDirectory.dir('repo')
+        }
+    }
+}

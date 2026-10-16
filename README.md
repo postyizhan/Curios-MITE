@@ -20,6 +20,8 @@ Curios 的 Minecraft 1.6.4 MITE / FishModLoader 移植项目，为 BountifulBaub
 
 需要 Java 17，以及 FishModLoader 的 Gradle 依赖仓库。
 
+构建产物通过 GitHub Pages Maven 仓库公开发布，坐标为 `top.theillusivec4:curios-mite:0.1.0`。下游模组可以添加 `https://postyizhan.github.io/Curios-MITE/maven/` 仓库后直接声明依赖；GitHub Actions 使用 `publishMavenJavaPublicationToGitHubPagesRepository` 生成待部署的 Maven 仓库目录。首次启用时，在仓库 Settings > Pages 选择 `gh-pages` 分支作为发布源。
+
 ## 提交规范
 
 项目使用中文约定式提交，例如：`fix: 修复戒指槽位索引问题`、`feat: 增加饰品栏持久化`、`docs: 更新移植路线`。
